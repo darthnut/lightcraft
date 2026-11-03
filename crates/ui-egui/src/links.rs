@@ -27,6 +27,11 @@ pub const LINKS: &[(&str, &str, &str)] = &[
 /// Where feedback and bug reports go.
 pub const FEEDBACK: &str = "https://github.com/storytold/lightcraft/issues/new";
 
+/// What the host's `open_url` reports when the browser refused the new tab (the web host: Chrome
+/// answers a blocked pop-up with `window.open` returning null, not an error). Share This IR Edit
+/// shows the line in its dialog instead of treating the press as failed ([`crate::share`]).
+pub const BLOCKED_TAB: &str = "the browser blocked the new tab";
+
 /// The URL behind a link command id.
 pub fn url_of(cmd: &str) -> Option<&'static str> {
     LINKS.iter().find(|(id, _, _)| *id == cmd).map(|(_, _, u)| *u)

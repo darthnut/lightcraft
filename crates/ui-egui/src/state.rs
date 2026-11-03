@@ -382,6 +382,11 @@ pub struct UiState {
     /// version without a seen version must not read as a pre-feature file).
     #[serde(default)]
     pub seen_version: Option<String>,
+    /// Share This IR Edit's step and prepared image pair ([`crate::share::ShareState`]): the pair
+    /// renders while the dialog is open, so the press does only what a browser lets a fresh click
+    /// do. Reset when that dialog opens and closes.
+    #[serde(skip)]
+    pub share: crate::share::ShareState,
     /// The Print dialog's page, selection and drag.
     #[serde(skip)]
     pub print: crate::print_view::PrintUi,
@@ -535,6 +540,7 @@ impl Default for UiState {
             lens_lookup_ids: Vec::new(),
             status: String::new(),
             dialog: None,
+            share: Default::default(),
             print: Default::default(),
         }
     }
