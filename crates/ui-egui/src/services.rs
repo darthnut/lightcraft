@@ -48,6 +48,9 @@ pub type HostAction = Box<dyn FnMut(&mut Session) -> Result<Value, String>>;
 /// last heard and wakes the UI itself when that changes; it is never polled for changes.
 pub type SystemThemeFn = Box<dyn Fn(&egui::Context) -> Option<egui::Theme>>;
 
+/// Put image bytes on the clipboard ([`crate::share`]).
+pub type WriteClipboardFn = Box<dyn FnMut(&[u8]) -> Result<(), String>>;
+
 /// Fetch one of the playground's sample IR photos ([`crate::samples`]) and import it.
 pub type FetchSampleFn = Box<dyn FnMut(&crate::samples::SamplePhoto) -> Result<(), String>>;
 
@@ -136,4 +139,8 @@ pub struct Services {
     /// `sample/<file>` next to the page and takes it down the dropped-file path). None (desktop,
     /// tests): the menu item says the samples are part of the web playground.
     pub fetch_sample: Option<FetchSampleFn>,
+    /// Put image bytes (a PNG) on the system clipboard (web only: `navigator.clipboard`, which
+    /// needs a recent user gesture). None (desktop, tests): the share dialog hides its image
+    /// checkbox and offers the JPEG download alone.
+    pub write_clipboard: Option<WriteClipboardFn>,
 }

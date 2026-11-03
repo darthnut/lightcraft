@@ -1129,6 +1129,14 @@ fn ui_commands_8(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
                 None => Err("the sample photos are part of the web playground".into()),
             }
         }
+        "dialog.shareIrEdit" => {
+            // the fork's IR playground: Photo > Share This IR Edit... (needs an active photo)
+            if app.session.active().is_none() {
+                return Some(Err("no active photo".into()));
+            }
+            app.ui.dialog = Some(Dialog::ShareIrEdit { filter: 0, notes: String::new(), camera: true, image: true });
+            Ok(Value::Null)
+        }
         "dialog.newFolder" => {
             app.ui.dialog = Some(Dialog::NewAlbum {
                 name: p.get("name").and_then(Value::as_str).unwrap_or("").into(),

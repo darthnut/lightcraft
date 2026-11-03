@@ -80,6 +80,7 @@ mod rules_editor;
 mod sam_setup;
 mod samples;
 mod scroll;
+mod share;
 mod slider_reset;
 mod slideshow;
 mod solo_sections;

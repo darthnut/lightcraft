@@ -70,6 +70,7 @@ pub mod profile_refs;
 pub mod proof;
 pub mod rename;
 pub mod segment;
+pub mod share;
 pub mod sidecar;
 pub mod slide;
 pub mod slide_overlay;

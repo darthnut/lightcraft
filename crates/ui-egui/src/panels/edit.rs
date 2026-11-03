@@ -395,6 +395,15 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                 control_override(app, ui, d, &format!("channelMixer.{k}.{src}"), true, Some(name));
             }
         }
+        // the fork's IR playground: share this look as a prefilled GitHub issue
+        ui.add_space(2.0);
+        egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 0, bottom: 4 }).show(ui, |ui| {
+            if crate::widgets::text_button(ui, "shareIrEdit", "Share This IR Edit…", false).clicked()
+                && let Err(e) = app.run("dialog.shareIrEdit", json!({}))
+            {
+                app.toast(ui.ctx(), e);
+            }
+        });
         ui.add_space(8.0);
     });
     // Lightroom Classic's Calibration panel (the cloud app hides it): last, like there.

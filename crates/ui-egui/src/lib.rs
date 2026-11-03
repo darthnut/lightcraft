@@ -41,6 +41,7 @@ pub mod region;
 pub mod reload;
 pub mod render;
 pub mod samples;
+pub mod share;
 pub mod shortcuts;
 pub mod sidebar;
 pub mod softpaint;

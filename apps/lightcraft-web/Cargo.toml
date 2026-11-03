@@ -35,6 +35,8 @@ web-sys = { workspace = true, features = [
     "DedicatedWorkerGlobalScope",
     "Document",
     "DomStringList",
+    "Clipboard",
+    "ClipboardItem",
     "Element",
     "Response",
     "EventTarget",

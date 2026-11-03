@@ -33,6 +33,19 @@ pub enum Dialog {
         details: Vec<String>,
         first: Option<u64>,
     },
+    /// Photo ▸ Share This IR Edit… (the fork's IR playground): opens a prefilled GitHub issue for
+    /// the lightcraft-ir-recipes repo ([`crate::share`]).
+    ShareIrEdit {
+        /// Index into [`crate::share::FILTERS`].
+        filter: usize,
+        notes: String,
+        /// Include camera and lens (on by default).
+        #[serde(default = "yes")]
+        camera: bool,
+        /// Include my edited image (on by default; only offered where the host has a clipboard).
+        #[serde(default = "yes")]
+        image: bool,
+    },
     /// File ▸ Print…: the Print module. Its state is the session's (`print.*`); the page on show
     /// and the selected cell are [`UiState::print`].
     Print,

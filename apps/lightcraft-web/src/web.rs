@@ -197,6 +197,32 @@ fn download(path: &str, bytes: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
+/// Put PNG bytes on the system clipboard as `image/png`. The blob is handed to `ClipboardItem` as
+/// a Promise (Safari requires a promise of the blob), this runs synchronously off the button
+/// press — a clipboard write needs a recent user gesture, and the GitHub tab takes the focus away
+/// right after — and a write that fails asynchronously (permissions, unsupported type) says so as
+/// a notice, where the JPEG download fallback is one sentence away.
+fn write_clipboard_png(png: &[u8]) -> Result<(), String> {
+    let e = |e: JsValue| format!("clipboard write failed: {e:?}");
+    let Some(w) = window() else { return Err("no window".into()) };
+    let clipboard = w.navigator().clipboard();
+    let arr = js_sys::Array::of1(&js_sys::Uint8Array::from(png));
+    let opts = web_sys::BlobPropertyBag::new();
+    opts.set_type("image/png");
+    let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&arr, &opts).map_err(e)?;
+    // Safari wants a Promise<Blob> in the record; Chrome takes either, so the promise form serves both
+    let record = js_sys::Object::new();
+    js_sys::Reflect::set(&record, &JsValue::from("image/png"), &js_sys::Promise::resolve(&blob)).map_err(e)?;
+    let item = web_sys::ClipboardItem::new_with_record_from_str_to_str_promise(&record).map_err(e)?;
+    let write = clipboard.write(&item);
+    wasm_bindgen_futures::spawn_local(async move {
+        if wasm_bindgen_futures::JsFuture::from(write).await.is_err() {
+            notice("Couldn't copy the image: drag lightcraft-ir-edit.jpg from your Downloads into the 'Your image' box.");
+        }
+    });
+    Ok(())
+}
+
 /// Build the browser host's `Services`: library backup/restore through browser storage and a
 /// download, asynchronous file picking, downloads for writes, and PNG encoding. Desktop-only
 /// services (native pickers, reveal, model folders) stay unset.
@@ -283,6 +309,7 @@ fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen
             w.open_with_url_and_target(url, "_blank").map(|_| ()).map_err(|_| "the browser blocked the new tab".to_string())
         })),
         pick_folder: None,
+        write_clipboard: Some(Box::new(|png: &[u8]| write_clipboard_png(png))),
         fetch_sample: Some(Box::new(move |s: &lightcraft_ui_egui::samples::SamplePhoto| {
             fetch_sample_photo(sample_originals.clone(), sample_backend.clone(), sample_ctx.clone(), s);
             Ok(())

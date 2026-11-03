@@ -288,6 +288,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::LightroomResult { .. } => "Lightroom Catalog Import",
         Dialog::LabelNames { .. } => "Edit Color Label Names",
         Dialog::CaptureTime { .. } => "Edit Capture Time",
+        Dialog::ShareIrEdit { .. } => "Share This IR Edit",
         Dialog::RenameKeyword { .. } => "Rename Keyword",
         Dialog::RenamePerson { .. } => "Rename Person",
         Dialog::KeywordTag { editing: None, .. } => "Create Keyword Tag",
@@ -409,6 +410,7 @@ fn import_ok_label(opts: &crate::import::ImportDialog) -> String {
 /// The confirm labels that are one fixed phrase.
 fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> &'static str {
     match dlg {
+        Dialog::ShareIrEdit { .. } => "Open on GitHub",
         // worded with a count or by the SAM state: `ok_label` builds them
         Dialog::Import { .. } | Dialog::Export { .. } | Dialog::SamModel { .. } => "",
         Dialog::LightroomResult { first: Some(_), .. } => "Show in Library",
@@ -904,6 +906,41 @@ fn new_smart_album_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, 
         ))
         .color(t.text_dim),
     );
+}
+
+/// The body of the Share This IR Edit dialog (the fork's IR playground).
+fn share_edit_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
+    let Dialog::ShareIrEdit { filter, notes, camera, image } = dlg else { return };
+    field(ui, "Filter", |ui| {
+        crate::widgets::combo_box("share-filter").selected_text(crate::share::FILTERS[*filter]).show_ui(ui, |ui| {
+            for (i, f) in crate::share::FILTERS.iter().enumerate() {
+                ui.selectable_value(filter, i, *f);
+            }
+        });
+    });
+    field(ui, "Notes", |ui| {
+        crate::text_field::TextField::singleline("field:shareNotes", notes)
+            .hint("Anything beyond the sliders (optional)")
+            .width(ui.available_width())
+            .show(ui);
+    });
+    let has_clipboard = app.services.write_clipboard.is_some();
+    field(ui, "", |ui| {
+        ui.checkbox(camera, "Include camera and lens");
+        if has_clipboard {
+            ui.checkbox(image, "Include my edited image");
+        }
+    });
+    ui.label(
+        egui::RichText::new(
+            "Opens GitHub in a new tab with this filled in. Nothing is sent until you press Submit there. You'll need a GitHub account.",
+        )
+        .color(t.text_dim)
+        .size(12.0),
+    );
+    if *image && has_clipboard {
+        ui.label(egui::RichText::new("Your image is copied: paste it into the 'Your image' box with Ctrl+V.").color(t.text_dim).size(12.0));
+    }
 }
 
 /// The body of the CaptureTime dialog.
@@ -1927,6 +1964,7 @@ fn dialog_content(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, body_m
         Dialog::SmartRules { .. } => smart_rules_body(app, ui, t, dlg),
         Dialog::NewSmartAlbum { .. } => new_smart_album_body(app, ui, t, confirm, dlg),
         Dialog::CaptureTime { .. } => capture_time_body(app, ui, t, dlg),
+        Dialog::ShareIrEdit { .. } => share_edit_body(app, ui, t, dlg),
         Dialog::LabelNames { .. } => label_names_body(app, ui, t, dlg),
         Dialog::Rename { .. } => rename_body(app, ui, t, dlg),
         Dialog::RenamePerson { .. } => rename_person_body(app, ui, t, confirm, dlg),

@@ -72,6 +72,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             p[key.as_str()] = json!(value.trim());
             app.run(command, p)
         }
+        Dialog::ShareIrEdit { .. } => crate::share::open_on_github(app, dlg),
         Dialog::CaptureTime { mode, time, days, hours, minutes, zone } => app.run(
             "photo.setCaptureTime",
             match mode.as_str() {
