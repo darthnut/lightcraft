@@ -28,7 +28,7 @@ pub const LANGUAGE_COMMANDS: &[UiCommand] = &[
 /// Every UI command: the languages, then everything else. `xtask parity` reads both tables from
 /// this file, so an id listed in `docs/parity-checklist.md` is checked wherever it is declared.
 pub fn ui_commands() -> impl Iterator<Item = &'static UiCommand> {
-    LANGUAGE_COMMANDS.iter().chain(UI_COMMANDS)
+    LANGUAGE_COMMANDS.iter().chain(UI_COMMANDS).chain(SAMPLE_COMMANDS)
 }
 
 /// The language a Language-menu command selects, if the id is one. The engine and the UI both go
@@ -56,6 +56,17 @@ pub fn language_from_command(id: &str) -> Option<crate::i18n::Locale> {
         _ => None,
     }
 }
+
+/// Help ▸ Sample IR Photos: one item per sample (the table restated — [`crate::samples`] is the
+/// source; a test keeps the two equal) plus All Samples. Fetching is the web host's
+/// [`crate::Services::fetch_sample`]; on the desktop the items say the samples are web-only.
+const SAMPLE_COMMANDS: &[UiCommand] = &[
+    ("sample.mt-hood", "Mt. Hood", None, "Help>Sample IR Photos"),
+    ("sample.forest-road", "Forest Road", None, "Help>Sample IR Photos"),
+    ("sample.river-canyon", "River Canyon", None, "Help>Sample IR Photos"),
+    ("sample.train-in-the-trees", "Train in the Trees", None, "Help>Sample IR Photos"),
+    ("sample.all", "All Samples", None, "Help>Sample IR Photos"),
+];
 
 pub const UI_COMMANDS: &[UiCommand] = &[
     ("ui.dock", "Arrange Panel", None, ""),

@@ -83,6 +83,7 @@ mod recheck;
 mod rename_person;
 mod rules_editor;
 mod sam_setup;
+mod samples;
 mod scan_probes;
 mod scroll;
 mod slider_reset;

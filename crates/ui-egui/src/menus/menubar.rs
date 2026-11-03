@@ -322,6 +322,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "---",
             "app.whatsNew",
             "app.shortcuts",
+            "@Sample IR Photos",
             "app.systemInfo",
             "app.openLogFolder",
             "---",
