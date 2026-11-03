@@ -1,0 +1,516 @@
+{
+  "format": "lightcraft.preset",
+  "version": 1,
+  "presets": [
+    {
+      "id": "ir-recipe-classic-swap",
+      "name": "Classic Swap: pink foliage, teal sky (pick snow/cloud/concrete)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 0,
+            "green": 0,
+            "blue": 100
+          },
+          "green": {
+            "red": 0,
+            "green": 100,
+            "blue": 0
+          },
+          "blue": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "color": {
+          "vibrance": 15
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-hood-river-pink",
+      "name": "Hood River Pink (pick snow/cloud/concrete)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 0,
+            "green": 0,
+            "blue": 100
+          },
+          "green": {
+            "red": 0,
+            "green": 100,
+            "blue": 0
+          },
+          "blue": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "color": {
+          "vibrance": 35,
+          "saturation": 7
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 100
+          },
+          "purple": {
+            "hue": 100
+          }
+        },
+        "curve": {
+          "darks": 19,
+          "highlights": -36
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-white-foliage",
+      "name": "White Foliage, Blue Sky (pick foliage)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": -40,
+            "green": 0,
+            "blue": 140
+          },
+          "green": {
+            "red": 50,
+            "green": -20,
+            "blue": 70
+          },
+          "blue": {
+            "red": 0,
+            "green": 30,
+            "blue": 70
+          }
+        },
+        "color": {
+          "vibrance": 10
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-gold-foliage",
+      "name": "Gold Foliage, Blue Sky (pick snow/cloud/concrete)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": -20,
+            "green": 0,
+            "blue": 120
+          },
+          "green": {
+            "red": 60,
+            "green": 0,
+            "blue": 40
+          },
+          "blue": {
+            "red": 140,
+            "green": 90,
+            "blue": -130
+          }
+        },
+        "color": {
+          "vibrance": 10
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-pastel",
+      "name": "Soft Pastel, half swap (pick snow/cloud/concrete)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 40,
+            "green": 0,
+            "blue": 60
+          },
+          "green": {
+            "red": 0,
+            "green": 100,
+            "blue": 0
+          },
+          "blue": {
+            "red": 60,
+            "green": 0,
+            "blue": 40
+          }
+        },
+        "color": {
+          "vibrance": 20
+        },
+        "light": {
+          "contrast": -15
+        },
+        "grading": {
+          "highlights": {
+            "hue": 330,
+            "sat": 8
+          },
+          "shadows": {
+            "hue": 200,
+            "sat": 10
+          }
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-mono-wood",
+      "name": "IR Mono, Wood Effect (no pick)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "channel_mixer": {
+          "red": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          },
+          "green": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          },
+          "blue": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "light": {
+          "contrast": 35
+        },
+        "effects": {
+          "clarity": 15
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-mono-glow",
+      "name": "IR Mono, Soft Glow (no pick)",
+      "group": "IR Recipes 1 \u00b7 Classic",
+      "settings": {
+        "channel_mixer": {
+          "red": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          },
+          "green": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          },
+          "blue": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "light": {
+          "contrast": 10
+        },
+        "effects": {
+          "clarity": -30
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-aerochrome",
+      "name": "Faux Aerochrome: red foliage, blue sky (pick snow/cloud/concrete)",
+      "group": "IR Recipes 2 \u00b7 Wild",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": -10,
+            "green": -30,
+            "blue": 140
+          },
+          "green": {
+            "red": 10,
+            "green": 150,
+            "blue": -60
+          },
+          "blue": {
+            "red": 140,
+            "green": 90,
+            "blue": -130
+          }
+        },
+        "color": {
+          "vibrance": 10
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-fake-summer",
+      "name": "Fake Summer: green foliage (pick snow/cloud/concrete)",
+      "group": "IR Recipes 2 \u00b7 Wild",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": -170,
+            "green": 140,
+            "blue": 130
+          },
+          "green": {
+            "red": -30,
+            "green": 20,
+            "blue": 110
+          },
+          "blue": {
+            "red": 20,
+            "green": 110,
+            "blue": -30
+          }
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-teal-forest",
+      "name": "Teal Forest, Orange Sky (pick snow/cloud/concrete)",
+      "group": "IR Recipes 2 \u00b7 Wild",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 80,
+            "green": 90,
+            "blue": -70
+          },
+          "green": {
+            "red": 10,
+            "green": -10,
+            "blue": 100
+          },
+          "blue": {
+            "red": -150,
+            "green": 50,
+            "blue": 200
+          }
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-lava",
+      "name": "Lava Fields: orange-red foliage, violet sky (pick snow/cloud/concrete)",
+      "group": "IR Recipes 2 \u00b7 Wild",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 80,
+            "green": -30,
+            "blue": 50
+          },
+          "green": {
+            "red": -70,
+            "green": 100,
+            "blue": 70
+          },
+          "blue": {
+            "red": 130,
+            "green": 50,
+            "blue": -80
+          }
+        },
+        "color": {
+          "vibrance": 15
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-alien",
+      "name": "Alien Planet: purple trees, green sky (pick snow/cloud/concrete)",
+      "group": "IR Recipes 2 \u00b7 Wild",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 0,
+            "green": 20,
+            "blue": 80
+          },
+          "green": {
+            "red": 130,
+            "green": 110,
+            "blue": -140
+          },
+          "blue": {
+            "red": 30,
+            "green": -10,
+            "blue": 80
+          }
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-night-vision",
+      "name": "Night Vision Goggles (no pick)",
+      "group": "IR Recipes 3 \u00b7 Silly",
+      "settings": {
+        "channel_mixer": {
+          "red": {
+            "red": 20,
+            "green": 0,
+            "blue": 0
+          },
+          "green": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          },
+          "blue": {
+            "red": 20,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "light": {
+          "contrast": 35
+        },
+        "vignette": {
+          "amount": -60
+        },
+        "grain": {
+          "amount": 45
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-day-for-night",
+      "name": "Day for Night (pick snow/cloud/concrete)",
+      "group": "IR Recipes 3 \u00b7 Silly",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 0,
+            "green": 0,
+            "blue": 100
+          },
+          "green": {
+            "red": 0,
+            "green": 100,
+            "blue": 0
+          },
+          "blue": {
+            "red": 100,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "light": {
+          "exposure": -1.8,
+          "contrast": 20
+        },
+        "color": {
+          "saturation": -40
+        },
+        "grading": {
+          "global": {
+            "hue": 220,
+            "sat": 35
+          }
+        }
+      }
+    },
+    {
+      "id": "ir-recipe-mars",
+      "name": "Mars Holiday (pick foliage)",
+      "group": "IR Recipes 3 \u00b7 Silly",
+      "settings": {
+        "wb": {
+          "mode": "custom",
+          "temp": 2000,
+          "tint": 0
+        },
+        "channel_mixer": {
+          "red": {
+            "red": 120,
+            "green": 0,
+            "blue": -20
+          },
+          "green": {
+            "red": 40,
+            "green": 60,
+            "blue": 0
+          },
+          "blue": {
+            "red": 0,
+            "green": 30,
+            "blue": 70
+          }
+        },
+        "grading": {
+          "global": {
+            "hue": 22,
+            "sat": 40
+          }
+        },
+        "color": {
+          "vibrance": 20
+        }
+      }
+    }
+  ]
+}

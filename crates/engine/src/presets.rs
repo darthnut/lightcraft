@@ -213,7 +213,7 @@ fn p(group: &str, id: &str, name: &str, settings: serde_json::Value) -> Preset {
 }
 
 pub fn builtin() -> Vec<Preset> {
-    vec![
+    let list = vec![
         p(
             "Color",
             "warm-glow",
@@ -462,7 +462,21 @@ pub fn builtin() -> Vec<Preset> {
             "Sepia Tone",
             json!({"treatment": "bw", "grading": {"shadows": {"hue": 32.0, "sat": 22.0, "lum": 0.0}, "highlights": {"hue": 42.0, "sat": 18.0, "lum": 0.0}}, "curve": {"shadows": 10.0}}),
         ),
-    ]
+    ];
+    // ---- the IR recipes (fork's IR playground): their own `.lcpreset`, shipped with the app and
+    // parsed here so the file stays the single source; nothing below changes them but the built-in
+    // flag, which a file on disk can never set
+    let mut out = list;
+    match parse_preset_file("IR Recipes.lcpreset", include_bytes!("ir-recipes.lcpreset")) {
+        Ok(mut ir) => {
+            for pr in &mut ir {
+                pr.builtin = true;
+            }
+            out.extend(ir);
+        }
+        Err(e) => log::error!("the IR recipes did not parse: {e}"),
+    }
+    out
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -572,6 +586,34 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The IR recipes ship as their own `.lcpreset` (the fork's IR playground): all 15 arrive as
+    /// built-ins under their three groups, unchanged but for the flag, and every one applies.
+    #[test]
+    fn ir_recipes_load_as_builtin_presets() {
+        let mut ir = 0;
+        for pr in builtin().into_iter().filter(|p| p.id.starts_with("ir-recipe-")) {
+            ir += 1;
+            assert!(pr.builtin, "{} is built-in", pr.id);
+            assert!(pr.group.starts_with("IR Recipes "), "{} group: {}", pr.id, pr.group);
+            let base = lightcraft_develop::DevelopSettings::default();
+            let out = pr.apply(&base, 1.0);
+            assert_ne!(out, base, "{} had no effect", pr.id);
+            // the look is the mixer (plus white balance and colour), never crop or masks
+            assert!(pr.settings.get("channel_mixer").is_some(), "{} carries a mixer", pr.id);
+            assert!(pr.settings.get("crop").is_none() && pr.settings.get("masks").is_none(), "{} is look-only", pr.id);
+        }
+        assert_eq!(ir, 15, "all 15 recipes");
+        // the three groups, in order
+        let groups: Vec<String> = builtin().into_iter().filter(|p| p.id.starts_with("ir-recipe-")).map(|p| p.group.clone()).collect();
+        let mut seen: Vec<String> = Vec::new();
+        for g in &groups {
+            if !seen.contains(g) {
+                seen.push(g.clone());
+            }
+        }
+        assert_eq!(seen.len(), 3, "three groups: {seen:?}");
+    }
 
     #[test]
     fn builtin_presets_parse_and_apply() {
