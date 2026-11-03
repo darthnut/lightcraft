@@ -412,18 +412,29 @@ fn start_card(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let w = ui.available_width();
             crate::widgets::announce_region(ui, egui::accesskit::Role::Note, crate::i18n::tr("IR playground: start here"));
             ui.add(egui::Label::new(egui::RichText::new(crate::i18n::tr("IR playground: start here")).font(t.semibold(13.0)).color(t.text)));
-            ui.add(egui::Label::new(card_job(&t, w, &[("1. Click a recipe under ", false), ("IR Recipes", true), (".", false)])));
+            // two ways in: the mixer itself (what the playground tests) or a recipe built on it
             ui.add(egui::Label::new(card_job(
                 &t,
                 w,
-                &[("2. If its name says ", false), ("(pick …)", true), (": in ", false), ("Channel Mixer", true), (", click the picker", false)],
+                &[
+                    ("1. Press ", false),
+                    ("Swap Red and Blue", true),
+                    (" in ", false),
+                    ("Channel Mixer", true),
+                    (", or click a recipe under ", false),
+                    ("IR Recipes", true),
+                    (".", false),
+                ],
             )));
+            ui.add(egui::Label::new(card_job(&t, w, &[("2. Then pick: in ", false), ("Channel Mixer", true), (", click the picker", false)])));
             // the Channel Mixer's own eyedropper (`Icon::Picker`), leading the sentence it picks up
             ui.horizontal_wrapped(|ui| {
                 let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
                 paint(ui.painter(), r, Icon::Picker, t.accent);
                 ui.add(egui::Label::new(
-                    egui::RichText::new(crate::i18n::tr("then click what it names in the photo.")).font(t.font(11.5)).color(t.text_label),
+                    egui::RichText::new(crate::i18n::tr("then something white or grey in the photo (or what a recipe's (pick …) names)."))
+                        .font(t.font(11.5))
+                        .color(t.text_label),
                 ));
             });
             ui.horizontal_wrapped(|ui| {
