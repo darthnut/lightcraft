@@ -36,6 +36,7 @@ web-sys = { workspace = true, features = [
     "Document",
     "DomStringList",
     "Element",
+    "Response",
     "EventTarget",
     "File",
     "FileList",

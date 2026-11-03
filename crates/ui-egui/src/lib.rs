@@ -40,6 +40,7 @@ pub mod recheck;
 pub mod region;
 pub mod reload;
 pub mod render;
+pub mod samples;
 pub mod shortcuts;
 pub mod sidebar;
 pub mod softpaint;

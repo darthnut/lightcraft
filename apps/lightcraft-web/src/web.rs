@@ -121,6 +121,35 @@ async fn read_file(originals: Originals, backend: Option<Backend>, file: web_sys
     }
 }
 
+/// Fetch `url` (relative to the page, so the site works under a subpath) as bytes.
+async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
+    let e = |e: JsValue| format!("{e:?}");
+    let w = window().ok_or("no window")?;
+    let resp = wasm_bindgen_futures::JsFuture::from(w.fetch_with_str(url)).await.map_err(e)?;
+    let resp: web_sys::Response = resp.dyn_into().map_err(|_| "not a response".to_string())?;
+    if !resp.ok() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    let buf = wasm_bindgen_futures::JsFuture::from(resp.array_buffer().map_err(e)?).await.map_err(e)?;
+    Ok(js_sys::Uint8Array::new(&buf).to_vec())
+}
+
+/// Fetch one of the playground's sample IR photos (`sample/<file>`, next to the site) and take it
+/// down the dropped-file path: bytes into browser storage, then the queued import, which skips it
+/// as a duplicate when the library already has it. A fetch failure (the samples are optional
+/// files beside the site) says so and carries on.
+fn fetch_sample_photo(originals: Originals, backend: Option<Backend>, ctx: egui::Context, s: &lightcraft_ui_egui::samples::SamplePhoto) {
+    // the sample's own static strings, so the async block needs no borrow of `s`
+    let (name, file) = (s.name, s.file);
+    notice(&format!("Downloading {name}…"));
+    wasm_bindgen_futures::spawn_local(async move {
+        match fetch_bytes(&format!("sample/{file}")).await {
+            Ok(bytes) => store_file(originals, backend, file.to_string(), bytes, ctx).await,
+            Err(e) => notice(&format!("{name} could not be downloaded ({e}). The sample photos ship as separate files next to the site.")),
+        }
+    });
+}
+
 /// Show the browser's open dialog; picked files are imported asynchronously.
 fn open_picker(originals: Originals, backend: Option<Backend>, ctx: egui::Context) {
     let Some(doc) = window().and_then(|w| w.document()) else { return };
@@ -173,6 +202,7 @@ fn download(path: &str, bytes: &[u8]) -> Result<(), String> {
 /// services (native pickers, reveal, model folders) stay unset.
 fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen: Rc<Cell<bool>>, ctx: egui::Context) -> Services {
     let (backup_backend, backup_files) = (backend.clone(), files);
+    let (sample_originals, sample_backend, sample_ctx) = (originals.clone(), backend.clone(), ctx.clone());
     let restore_backend = backend.clone();
     Services {
         local_places: None,
@@ -253,6 +283,10 @@ fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen
             w.open_with_url_and_target(url, "_blank").map(|_| ()).map_err(|_| "the browser blocked the new tab".to_string())
         })),
         pick_folder: None,
+        fetch_sample: Some(Box::new(move |s: &lightcraft_ui_egui::samples::SamplePhoto| {
+            fetch_sample_photo(sample_originals.clone(), sample_backend.clone(), sample_ctx.clone(), s);
+            Ok(())
+        })),
         // the browser reports prefers-color-scheme to egui
         system_theme: None,
     }
@@ -473,15 +507,19 @@ impl WebApp {
             Some(e) => Err(format!("{e}. Nothing was changed in storage")),
             None => session.open_library_in(stores, true).cloned().map_err(|e| e.to_string()),
         };
+        let mut created = false;
         match opened {
-            Ok(r) => log::info!(
-                "lightcraft: library {} in {:.0} ms ({} photos; snapshot seq {}, {} ops replayed)",
-                if r.created { "created" } else { "loaded" },
-                perf_now() - t,
-                session.catalog.len(),
-                r.snapshot_seq,
-                r.replayed
-            ),
+            Ok(r) => {
+                created = r.created;
+                log::info!(
+                    "lightcraft: library {} in {:.0} ms ({} photos; snapshot seq {}, {} ops replayed)",
+                    if r.created { "created" } else { "loaded" },
+                    perf_now() - t,
+                    session.catalog.len(),
+                    r.snapshot_seq,
+                    r.replayed
+                )
+            }
             Err(e) => {
                 // never a silent demo session (issue #100): an empty one, and the window says why
                 log::error!("opening the library failed: {e}");
@@ -540,6 +578,11 @@ impl WebApp {
         }
         log::info!("lightcraft: {n} render workers");
         CTX.with(|c| *c.borrow_mut() = Some(cc.egui_ctx.clone()));
+        if created && backend.is_some() {
+            // a brand-new library (first visit): land the visitor on an IR photo — one raw, not
+            // all four — through the same dropped-file path the menu items use
+            fetch_sample_photo(originals.clone(), backend.clone(), cc.egui_ctx.clone(), &lightcraft_ui_egui::samples::SAMPLES[0]);
+        }
         let origin = lightcraft_ui_egui::monotonic_ms();
         WebApp {
             app,

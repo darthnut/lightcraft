@@ -1109,6 +1109,26 @@ fn ui_commands_8(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
             }
             Ok(Value::Null)
         }
+        // the playground's sample IR photos: the web host fetches `sample/<file>` next to the page
+        // and imports it through the dropped-file path (duplicates already in the library are
+        // skipped by the import); on the desktop there is nothing next to the app to fetch
+        id if crate::samples::sample(id).is_some() || id == "sample.all" => {
+            let picks: Vec<&crate::samples::SamplePhoto> =
+                if id == "sample.all" { crate::samples::SAMPLES.iter().collect() } else { crate::samples::sample(id).into_iter().collect() };
+            match app.services.fetch_sample.as_mut() {
+                Some(fetch) => {
+                    let mut out = Ok(Value::Null);
+                    for s in picks {
+                        if let Err(e) = fetch(s) {
+                            out = Err(e);
+                            break;
+                        }
+                    }
+                    out
+                }
+                None => Err("the sample photos are part of the web playground".into()),
+            }
+        }
         "dialog.newFolder" => {
             app.ui.dialog = Some(Dialog::NewAlbum {
                 name: p.get("name").and_then(Value::as_str).unwrap_or("").into(),

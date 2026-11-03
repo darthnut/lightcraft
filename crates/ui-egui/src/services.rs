@@ -48,6 +48,9 @@ pub type HostAction = Box<dyn FnMut(&mut Session) -> Result<Value, String>>;
 /// last heard and wakes the UI itself when that changes; it is never polled for changes.
 pub type SystemThemeFn = Box<dyn Fn(&egui::Context) -> Option<egui::Theme>>;
 
+/// Fetch one of the playground's sample IR photos ([`crate::samples`]) and import it.
+pub type FetchSampleFn = Box<dyn FnMut(&crate::samples::SamplePhoto) -> Result<(), String>>;
+
 /// Platform services injected by the host app (desktop or web).
 #[derive(Default)]
 pub struct Services {
@@ -129,4 +132,8 @@ pub struct Services {
     pub restore_library: Option<HostAction>,
     /// The system appearance for Appearance Mode ▸ Auto, ahead of egui's own report.
     pub system_theme: Option<SystemThemeFn>,
+    /// Fetch one of the playground's sample IR photos and import it (web only: the host downloads
+    /// `sample/<file>` next to the page and takes it down the dropped-file path). None (desktop,
+    /// tests): the menu item says the samples are part of the web playground.
+    pub fetch_sample: Option<FetchSampleFn>,
 }
