@@ -3,13 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LightCraft</title>
+  <title>LightCraft IR playground (unofficial)</title>
   <link rel="icon" href="data:,">
   <meta name="description" content="LightCraft: open-source photo library and raw developer, running in your browser (WASM).">
   <style>
     :root { color-scheme: dark; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1c1c1c; }
-    canvas#lightcraft_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    canvas#lightcraft_canvas { position: absolute; inset: 0 0 24px 0; width: 100%; height: calc(100% - 24px); display: block; }
+    #lightcraft_unofficial {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 24px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: #222; color: #9a9a9a; font: 11px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+      border-top: 1px solid #383838;
+    }
+    #lightcraft_unofficial a { color: #7ab0e8; text-decoration: none; }
+    #lightcraft_unofficial a:hover { text-decoration: underline; }
     #lightcraft_loading {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       color: #b8b8b8; font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; pointer-events: none;
@@ -21,6 +29,10 @@
   <canvas id="lightcraft_canvas"></canvas>
   <div id="lightcraft_loading">Loading LightCraft…</div>
   <div id="lightcraft_status" aria-live="polite"></div>
+  <div id="lightcraft_unofficial">
+    <span>Unofficial test build of LightCraft with the channel mixer from PR #3579. Photos stay in your browser.</span>
+    <a href="https://github.com/darthnut/lightcraft-ir-recipes" target="_blank" rel="noopener">Recipes &amp; samples: darthnut/lightcraft-ir-recipes</a>
+  </div>
   <script type="module">
     import init, { start, command } from "./lightcraft_web.js";
     (async () => {
