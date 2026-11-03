@@ -207,10 +207,6 @@ mod tests {
             assert!(!bytes.windows(4).any(|w| w == b"Exif"), "{what} carries no EXIF");
             assert!(!bytes.windows(4).any(|w| w == b"GPSI" || w == b"GPS\x00"), "{what} carries no GPS");
         }
-        // the naming does not leak the photo's own name into the files
-        let name = String::from_utf8_lossy(&img.jpeg[620..660]).to_string();
-        let _ = name;
-
         // the stepping: a budget the largest size misses (its own PNG, minus one byte) is met lower
         // down, and the answer says which edge it landed on
         let largest = images_under(&mut s, id, &[2048], usize::MAX).expect("the largest size");

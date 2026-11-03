@@ -939,7 +939,7 @@ fn share_edit_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: 
         .size(12.0),
     );
     if *image && has_clipboard {
-        ui.label(egui::RichText::new("Your image is copied: paste it into the 'Your image' box with Ctrl+V.").color(t.text_dim).size(12.0));
+        ui.label(egui::RichText::new("Your image will be copied: paste it into the 'Your image' box with Ctrl+V.").color(t.text_dim).size(12.0));
     }
 }
 

@@ -214,7 +214,8 @@ fn write_clipboard_png(png: &[u8]) -> Result<(), String> {
     let record = js_sys::Object::new();
     js_sys::Reflect::set(&record, &JsValue::from("image/png"), &js_sys::Promise::resolve(&blob)).map_err(e)?;
     let item = web_sys::ClipboardItem::new_with_record_from_str_to_str_promise(&record).map_err(e)?;
-    let write = clipboard.write(&item);
+    // `write` takes a sequence of items, not a single one
+    let write = clipboard.write(&js_sys::Array::of1(&item));
     wasm_bindgen_futures::spawn_local(async move {
         if wasm_bindgen_futures::JsFuture::from(write).await.is_err() {
             notice("Couldn't copy the image: drag lightcraft-ir-edit.jpg from your Downloads into the 'Your image' box.");
