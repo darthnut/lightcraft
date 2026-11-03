@@ -45,7 +45,12 @@ fn starred_presets_are_listed_in_favorites_on_top() {
     let a = rect(&h, &format!("presetFavorite:{first}")).unwrap();
     let b = rect(&h, &format!("presetFavorite:{last}")).unwrap();
     assert!(header.bottom() <= a.top() && a.top() < b.top(), "{header:?} {a:?} {b:?}");
-    // still in its own group
+    // still in its own group (the fork's IR playground folds the stock groups until opened, so
+    // open `first`'s first)
+    let group = h.app.session.presets.iter().find(|p| p.id == first).map(|p| p.group.clone()).unwrap();
+    let t = std::time::Duration::from_secs(10);
+    let r = h.request("ui.clickWidget", json!({"id": format!("presetGroup:{group}")}), t);
+    assert_eq!(r["ok"], true, "{r}");
     assert!(rect(&h, &format!("preset:{first}")).is_some());
     // unstarring the last one removes the section
     for id in [&first, &last] {

@@ -705,7 +705,10 @@ impl WebApp {
         }
         if created && backend.is_some() {
             // a brand-new library (first visit): land the visitor on an IR photo — one raw, not
-            // all four — through the same dropped-file path the menu items use
+            // all four — through the same dropped-file path the menu items use, with the panels
+            // that teach the workflow open: the Presets column (its start-here card and the IR
+            // recipes) and the Channel Mixer section
+            lightcraft_ui_egui::panels::presets::first_visit_layout(&mut app.ui);
             fetch_sample_photo(originals.clone(), backend.clone(), cc.egui_ctx.clone(), &lightcraft_ui_egui::samples::SAMPLES[0]);
         }
         let origin = lightcraft_ui_egui::monotonic_ms();
