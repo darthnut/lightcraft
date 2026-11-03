@@ -244,6 +244,10 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
         backup_library: None,
         restore_library: None,
         system_theme: appearance::service(),
+        // the playground's web-only services: no samples sit next to a desktop app (the menu
+        // items say so), and the share dialog's image checkbox hides itself without a clipboard
+        fetch_sample: None,
+        write_clipboard: None,
     }
 }
 
