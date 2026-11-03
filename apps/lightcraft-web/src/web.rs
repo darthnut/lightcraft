@@ -307,7 +307,12 @@ fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen
         check_editor: None,
         open_url: Some(Box::new(|url: &str| {
             let w = web_sys::window().ok_or("no window")?;
-            w.open_with_url_and_target(url, "_blank").map(|_| ()).map_err(|_| "the browser blocked the new tab".to_string())
+            // Chrome answers a pop-up it blocked with Ok(None), not an Err: either way the tab
+            // never opened, and the dialog wants to know (Share This IR Edit's Open GitHub Again)
+            match w.open_with_url_and_target(url, "_blank") {
+                Ok(Some(_)) => Ok(()),
+                _ => Err(lightcraft_ui_egui::links::BLOCKED_TAB.to_string()),
+            }
         })),
         pick_folder: None,
         write_clipboard: Some(Box::new(|png: &[u8]| write_clipboard_png(png))),

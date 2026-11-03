@@ -362,6 +362,11 @@ pub struct UiState {
     pub status: String,
     #[serde(skip)]
     pub dialog: Option<Dialog>,
+    /// Share This IR Edit's step and prepared image pair ([`crate::share::ShareState`]): the pair
+    /// renders while the dialog is open, so the press does only what a browser lets a fresh click
+    /// do. Reset when that dialog opens and closes.
+    #[serde(skip)]
+    pub share: crate::share::ShareState,
     /// The Print dialog's page, selection and drag.
     #[serde(skip)]
     pub print: crate::print_view::PrintUi,
@@ -510,6 +515,7 @@ impl Default for UiState {
             rechecked_library: None,
             status: String::new(),
             dialog: None,
+            share: Default::default(),
             print: Default::default(),
         }
     }

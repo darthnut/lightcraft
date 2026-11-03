@@ -439,7 +439,7 @@ fn start_card(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             });
             ui.add(egui::Label::new(
                 // `→` and not the menu triangle: that has no glyph outside craft-fonts (i18n tests)
-                egui::RichText::new(crate::i18n::tr("More photos: Help → Sample IR Photos. Your own raws: drag them in."))
+                egui::RichText::new(crate::i18n::tr("More photos: Help → Sample IR Photos. Your own photos: drag them in, or File → Import Photos…"))
                     .font(t.font(11.0))
                     .color(t.text_dim),
             ));

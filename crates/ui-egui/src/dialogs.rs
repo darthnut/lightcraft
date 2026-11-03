@@ -236,6 +236,11 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
     if close && matches!(dlg, Dialog::Import { .. }) {
         app.renderer.forget_imports();
     }
+    // the prepared image pair (megabytes) outlives the dialog only in memory: let it go with the
+    // dialog, and leave nothing of one share behind for the next
+    if close && matches!(dlg, Dialog::ShareIrEdit { .. }) {
+        app.ui.share = Default::default();
+    }
     app.ui.dialog = if close { None } else { Some(dlg) };
 }
 
@@ -367,8 +372,10 @@ impl SamState {
 }
 
 /// The label of a dialog's cancel button.
-fn cancel_label(dlg: &Dialog, sam: &SamState) -> &'static str {
+fn cancel_label(app: &LightcraftApp, dlg: &Dialog, sam: &SamState) -> &'static str {
     match dlg {
+        // Share This IR Edit's second step is done when the dialog goes: Done, not Cancel
+        Dialog::ShareIrEdit { .. } if app.ui.share.step == crate::share::ShareStep::AlmostDone => "Done",
         Dialog::SamModel { .. } if sam.running || sam.installed || sam.by_hand => "Close",
         Dialog::SamModel { .. } => "Not Now",
         Dialog::LightroomResult { .. } => "Close",
@@ -410,6 +417,8 @@ fn import_ok_label(opts: &crate::import::ImportDialog) -> String {
 /// The confirm labels that are one fixed phrase.
 fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> &'static str {
     match dlg {
+        // Share This IR Edit's second step opens the same URL again from the fresh click
+        Dialog::ShareIrEdit { .. } if app.ui.share.step == crate::share::ShareStep::AlmostDone => "Open GitHub Again",
         Dialog::ShareIrEdit { .. } => "Open on GitHub",
         // worded with a count or by the SAM state: `ok_label` builds them
         Dialog::Import { .. } | Dialog::Export { .. } | Dialog::SamModel { .. } => "",
@@ -478,8 +487,10 @@ fn sam_ok_label(dlg: &Dialog, sam: &SamState) -> &'static str {
 }
 
 /// Whether the confirm button works: installing waits for the licence to be accepted (and Synchronize waits for the
-/// scan), a rename waits for its conflicts to be settled, smart-album rules that can't mean anything wait to be fixed.
-fn can_confirm(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> bool {
+/// scan), a rename waits for its conflicts to be settled, smart-album rules that can't mean anything wait to be fixed,
+/// and Share This IR Edit waits for its image pair — the whole point of preparing it ahead of the press is that the
+/// press has nothing slow left to do (a browser lets a click alone write the clipboard and open a tab).
+pub(crate) fn can_confirm(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> bool {
     let rename_blocked = match dlg {
         Dialog::RenamePerson { from, to, merge } => {
             let plan = person_rename_plan(&app.session.catalog, from, to);
@@ -487,20 +498,28 @@ fn can_confirm(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> bool {
         }
         _ => false,
     };
+    // unticking the image, or a render that failed, shares without it at once; a clipboard the
+    // host doesn't have never renders one
+    let share_preparing = matches!(dlg, Dialog::ShareIrEdit { image, .. }
+        if *image
+            && app.services.write_clipboard.is_some()
+            && app.ui.share.step == crate::share::ShareStep::Compose
+            && app.ui.share.images.is_none()
+            && app.ui.share.render_error.is_none());
     let waiting = matches!(
         dlg,
         Dialog::DenoiseModel { accepted: false, .. } | Dialog::FaceModel { accepted: false, .. } | Dialog::SynchronizeFolder { counts: None, .. }
     );
     let bad_rules =
         matches!(dlg, Dialog::SmartRules { id, rules, .. } if !rules.check_for(&app.session.catalog, id.map(lightcraft_catalog::AlbumId)).is_empty());
-    !rename_blocked && (informational || (!waiting && !bad_rules))
+    !rename_blocked && !share_preparing && (informational || (!waiting && !bad_rules))
 }
 
 /// The row of buttons under a dialog: Cancel and the confirm; `close` and `confirm` are set when one is clicked.
 fn button_row(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &Dialog, close: &mut bool, confirm: &mut bool) {
     let informational = is_informational(dlg);
     let sam = SamState::of(app);
-    let cancel = cancel_label(dlg, &sam);
+    let cancel = cancel_label(app, dlg, &sam);
     let ok = ok_label(app, dlg, informational, &sam);
     let ok = ok.as_str();
     let can_confirm = can_confirm(app, dlg, informational);
@@ -646,9 +665,11 @@ fn prompt_verb(command: &str) -> &'static str {
 }
 
 /// Whether a dialog stays open after its action succeeded (the SAM 3 dialog while the model
-/// downloads).
+/// downloads; Share This IR Edit once the press opened the issue, to say what is left to do on
+/// GitHub and open the tab again if the browser blocked it).
 pub fn keeps_open(app: &LightcraftApp, dlg: &Dialog) -> bool {
-    matches!(dlg, Dialog::SamModel { .. }) && !app.session.segmenter.installed()
+    (matches!(dlg, Dialog::SamModel { .. }) && !app.session.segmenter.installed())
+        || (matches!(dlg, Dialog::ShareIrEdit { .. }) && app.ui.share.step == crate::share::ShareStep::AlmostDone)
 }
 
 /// The body of the AutoStack dialog.
@@ -908,8 +929,15 @@ fn new_smart_album_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, 
     );
 }
 
-/// The body of the Share This IR Edit dialog (the fork's IR playground).
+/// The body of the Share This IR Edit dialog (the fork's IR playground): the form, or — once a
+/// press opened the issue — the steps left on GitHub. The image pair renders while the form is
+/// shown ([`crate::share::ShareState`]), so the press has nothing slow left to do: a browser lets a
+/// click alone write the clipboard and open a tab while it is still fresh.
 fn share_edit_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
+    if app.ui.share.step == crate::share::ShareStep::AlmostDone {
+        share_almost_done_body(app, ui, t, dlg);
+        return;
+    }
     let Dialog::ShareIrEdit { filter, notes, camera, image } = dlg else { return };
     field(ui, "Filter", |ui| {
         crate::widgets::combo_box("share-filter").selected_text(crate::share::FILTERS[*filter]).show_ui(ui, |ui| {
@@ -939,7 +967,53 @@ fn share_edit_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: 
         .size(12.0),
     );
     if *image && has_clipboard {
-        ui.label(egui::RichText::new("Your image will be copied: paste it into the 'Your image' box with Ctrl+V.").color(t.text_dim).size(12.0));
+        // what the image is waiting for: nothing, once the pair has rendered; a reason, when it
+        // can't; the "Preparing your image…" line while it does (the press stays off until then)
+        let line = if app.ui.share.images.is_some() {
+            "Your image will be copied: paste it into the 'Your image' box with Ctrl+V.".to_string()
+        } else if let Some(e) = &app.ui.share.render_error {
+            format!("No image was made to share ({e}). The issue can still be opened without it.")
+        } else {
+            "Preparing your image…".to_string()
+        };
+        ui.label(egui::RichText::new(line).color(t.text_dim).size(12.0));
+        // A frame after the dialog first paints, the render: a newly shown window's first pass
+        // only sizes it (egui keeps it invisible), so that one doesn't count — the first painted
+        // frame shows this line with the button held off, the next does the seconds-long work.
+        // Once, with the dialog modal: nothing it renders from can change while it is open.
+        if app.ui.share.images.is_none() && app.ui.share.render_error.is_none() && !ui.is_sizing_pass() {
+            if app.ui.share.render_due {
+                app.ui.share.render_due = false;
+                crate::share::render_image(app);
+            } else {
+                app.ui.share.render_due = true;
+                ui.ctx().request_repaint();
+            }
+        }
+    }
+}
+
+/// The dialog's second step, after a press opened the issue: what is left to do in the GitHub tab,
+/// and what to do about a tab the browser blocked or a clipboard it refused.
+fn share_almost_done_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
+    let Dialog::ShareIrEdit { image, .. } = dlg else { return };
+    ui.label(egui::RichText::new("Almost done: finish on GitHub.").font(t.semibold(13.0)).color(t.text));
+    // the image line: paste it, or drag the download when the clipboard refused it; without one
+    // (unticked, or a render that failed) there is nothing but Create to press
+    let line = if *image && app.ui.share.clipboard_failed {
+        "Couldn't copy the image: drag lightcraft-ir-edit.jpg from your Downloads into the 'Your image' box instead."
+    } else if *image && app.ui.share.images.is_some() {
+        "In the GitHub tab: click the \"Your image\" box, press Ctrl+V (⌘V on a Mac), then press Create at the bottom."
+    } else {
+        "In the GitHub tab: press Create at the bottom."
+    };
+    ui.label(egui::RichText::new(line).color(t.text_label));
+    ui.label(egui::RichText::new("Nothing is shared until you do.").color(t.text_dim).size(12.0));
+    ui.label(egui::RichText::new("No GitHub tab? Your browser may have blocked it.").color(t.text_dim).size(12.0));
+    if app.ui.share.blocked {
+        ui.label(
+            egui::RichText::new("Your browser blocked the GitHub tab. Press Open GitHub Again, or allow pop-ups for this site.").color(t.reject),
+        );
     }
 }
 

@@ -1134,6 +1134,9 @@ fn ui_commands_8(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
             if app.session.active().is_none() {
                 return Some(Err("no active photo".into()));
             }
+            // a fresh dialog prepares a fresh image (the photo or its edit may have changed since
+            // the last one was shared) and starts again from the form
+            app.ui.share = Default::default();
             app.ui.dialog = Some(Dialog::ShareIrEdit { filter: 0, notes: String::new(), camera: true, image: true });
             Ok(Value::Null)
         }
