@@ -86,6 +86,7 @@ mod sam_setup;
 mod samples;
 mod scan_probes;
 mod scroll;
+mod share;
 mod slider_reset;
 mod slideshow;
 mod solo_sections;
