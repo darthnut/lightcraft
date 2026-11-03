@@ -1378,6 +1378,19 @@ fn hovering_the_applied_profile_drops_the_last_hover() {
     assert!(h.app.hover_preview.is_none(), "the applied profile is shown, not the last hovered one");
 }
 
+/// The fork's IR playground opens the IR recipe groups and folds the stock ones: fold the recipes
+/// back and open `groups`, so their presets' rows are there to click or hover.
+fn open_preset_groups(h: &mut Headless, t: Duration, groups: &[&str]) {
+    for id in ["IR Recipes 1 · Classic", "IR Recipes 2 · Wild", "IR Recipes 3 · Silly"] {
+        let r = h.request("ui.clickWidget", json!({"id": format!("presetGroup:{id}")}), t);
+        assert_eq!(r["ok"], true, "{r}");
+    }
+    for id in groups {
+        let r = h.request("ui.clickWidget", json!({"id": format!("presetGroup:{id}")}), t);
+        assert_eq!(r["ok"], true, "{r}");
+    }
+}
+
 /// The preset applied to a photo is still marked (and its Amount slider back) after visiting
 /// another photo, which shows none (issue #2392); an edit to the photo drops the mark.
 #[test]
@@ -1387,6 +1400,7 @@ fn applied_preset_is_marked_again_on_returning_to_the_photo() {
     h.request("ui.set", json!({"view": "detail"}), t);
     h.request("engine.execute", json!({"command": "panel.presets"}), t);
     h.settle(SETTLE);
+    open_preset_groups(&mut h, t, &["Color"]);
     let a = h.app.session.active().unwrap();
     let b = h.app.session.visible_cloned().into_iter().find(|id| *id != a).unwrap();
     let has = |h: &Headless, w: &str| h.app.widgets.iter().any(|(id, _)| id == w);
@@ -1421,6 +1435,7 @@ fn applied_preset_is_not_marked_on_an_active_photo_outside_the_selection() {
     h.request("ui.set", json!({"view": "detail"}), t);
     h.request("engine.execute", json!({"command": "panel.presets"}), t);
     h.settle(SETTLE);
+    open_preset_groups(&mut h, t, &["Color"]);
     let a = h.app.session.active().unwrap();
     let b = h.app.session.visible_cloned().into_iter().find(|id| *id != a).unwrap();
     h.app.session.selection.ids = vec![b];
@@ -1448,6 +1463,7 @@ fn preset_hover_previews_and_create_preset_groups() {
     h.request("ui.set", json!({"view": "detail"}), t);
     h.request("engine.execute", json!({"command": "panel.presets"}), t);
     h.settle(SETTLE);
+    open_preset_groups(&mut h, t, &["B&W", "Color"]);
     let id = h.app.session.active().unwrap();
     let photo = |h: &Headless| h.app.session.catalog.photo(id).unwrap().clone();
     let before = photo(&h);

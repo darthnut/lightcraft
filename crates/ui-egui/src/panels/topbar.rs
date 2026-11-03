@@ -45,14 +45,20 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             // traffic lights' room, and full screen gives that room back. Centring on `full` moved
             // the field, and changed its width, every time that room changed (issue #2365).
             let bar = Rect::from_min_max(pos2(full.left() - left as f32, full.top()), pos2(full.right() + 12.0, full.bottom()));
-            // The field stops short of the filter icon and the seven icons on the right; centred,
-            // it is twice the room between the window's centre and them.
-            let mut sw = 640.0f32.min(2.0 * (full.right() - 310.0 - bar.center().x)).max(190.0);
+            // The field stops short of the filter icon and the icons on the right; centred, it is
+            // twice the room between the window's centre and them. The fork's IR playground adds
+            // its Share IR Edit button leftmost of the right group and reserves room for it the
+            // same way; a window too narrow to leave it that room (the field already at its
+            // 190-point floor) drops the button — Photo ▸ Share This IR Edit… still runs it.
+            let share_w = crate::widgets::text_button_size(ui, "Share IR Edit");
+            let mut sw = 640.0f32.min(2.0 * (full.right() - 310.0 - share_w - 24.0 - bar.center().x));
             if !app.native_menu {
                 // leave room for the in-window menus left of the (centred) search field
                 let menus_right = full.left() + 140.0 + crate::menubar::bar_width(ui) + 24.0;
-                sw = sw.min(2.0 * (bar.center().x - menus_right)).max(190.0);
+                sw = sw.min(2.0 * (bar.center().x - menus_right));
             }
+            let share_top = sw >= 190.0;
+            let sw = sw.max(190.0);
             let search_left = bar.center().x - sw / 2.0;
             let sr = Rect::from_center_size(pos2(bar.center().x, full.center().y), vec2(sw, 28.0));
             if app.integrated_titlebar {
@@ -63,6 +69,9 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             filter_button(app, ui, &t, sr);
             let x = right_icons(app, ui, &t, full);
             appearance_button(app, ui, &t, full, x);
+            if share_top {
+                share_ir_edit_button(app, ui, full, x);
+            }
         });
     if let Some(slot) = slot {
         ui.ctx().layer_painter(ui.layer_id()).set(slot, egui::Shape::rect_filled(panel.response.rect, 0.0, t.chrome));
@@ -221,6 +230,24 @@ fn right_icons(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, full: Rec
         x -= 40.0;
     }
     x
+}
+
+/// The fork's IR playground: Share IR Edit beside the right icons, an accent-filled labelled button
+/// (the one thing a Reddit visitor should not miss) that runs `dialog.shareIrEdit`. `x` is where the
+/// appearance icon centres; the button takes the room to its left, one icon slot wider than itself.
+fn share_ir_edit_button(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, x: f32) {
+    let w = crate::widgets::text_button_size(ui, "Share IR Edit");
+    // the appearance icon's half-width plus a 12-point gap, then the button
+    let c = x - 26.0 - w / 2.0;
+    let r = Rect::from_center_size(pos2(c, full.center().y), vec2(w, 24.0));
+    let enabled = app.session.active().is_some();
+    let resp =
+        crate::widgets::accent_button_at(ui, "shareIrEditTop", "Share IR Edit", r, enabled).on_hover_text(crate::i18n::tr("Share This IR Edit…"));
+    if resp.clicked()
+        && let Err(e) = app.run("dialog.shareIrEdit", json!({}))
+    {
+        app.toast_error(ui.ctx(), e);
+    }
 }
 
 /// The appearance icon at `x`, with its theme-favourites menu.

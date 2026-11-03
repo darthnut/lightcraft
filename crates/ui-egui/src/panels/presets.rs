@@ -156,6 +156,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             // a later edit, undo or redo owns the step
             ui.data_mut(|d| d.remove::<AppliedPreset>(amt_id));
         }
+        // the fork's IR playground: the recipe workflow's three steps, above the groups
+        start_card(app, ui);
         let active = app.session.active();
         let marked = AppliedByPhoto::of(ui.ctx(), &app.session, active);
         let current = active.and_then(|id| app.session.develop_of(id)).map(|d| (*d).clone());
@@ -171,23 +173,28 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 let (g, builtin, favorites) = (grp.name.clone(), grp.builtin, grp.favorites);
                 // the Favorites section opens and closes apart from a user group named "Favorites"
                 let open_id = egui::Id::unique(("preset-group", favorites, &g));
-                let open: bool = ui.data(|d| d.get_temp(open_id)).unwrap_or(true);
+                // until the visitor toggles one: the Favorites section, the IR recipes and the
+                // user's own groups open, the stock groups folded, so the playground's recipes are
+                // the visible path
+                let open: bool = ui.data(|d| d.get_temp(open_id)).unwrap_or(favorites || grp.ir || grp.user);
                 let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
                 crate::widgets::announce(&resp, g.to_string());
                 // outside the `presetGroup:` ids, which a user group of any name can take
                 register(ui, if favorites { "presetFavorites".to_string() } else { format!("presetGroup:{g}") }, r);
+                // the fork's IR playground: its recipe groups draw in the accent colour
+                let header = if grp.ir { t.accent } else { t.text_label };
                 paint(
                     ui.painter(),
                     Rect::from_center_size(pos2(r.left() + 22.0, r.center().y), vec2(16.0, 16.0)),
                     if open { Icon::ChevronDown } else { Icon::ChevronRight },
-                    t.text_label,
+                    header,
                 );
                 ui.painter().text(
                     pos2(r.left() + 36.0, r.center().y),
                     Align2::LEFT_CENTER,
                     crate::i18n::builtin_label(&g, builtin),
                     t.semibold(13.0),
-                    t.text_label,
+                    header,
                 );
                 if resp.clicked() {
                     ui.data_mut(|d| d.insert_temp(open_id, !open));
@@ -333,6 +340,9 @@ struct Group {
     builtin: bool,
     /// Holds a user preset (a Move to Group target).
     user: bool,
+    /// One of the fork's IR playground recipe groups ("IR Recipes …"): listed right after
+    /// Favorites, opened and highlighted in the accent colour.
+    ir: bool,
     /// The Favorites section on top (issue #1999): the starred presets, each also in its own group.
     favorites: bool,
     items: Vec<usize>,
@@ -353,6 +363,7 @@ fn grouped(ctx: &egui::Context, presets: &PresetList) -> Arc<Vec<Group>> {
             name: p.group.clone(),
             builtin: false,
             user: false,
+            ir: p.group.starts_with("IR Recipes"),
             favorites: false,
             items: Vec::new(),
         });
@@ -360,12 +371,94 @@ fn grouped(ctx: &egui::Context, presets: &PresetList) -> Arc<Vec<Group>> {
         g.user |= !p.builtin;
         g.items.push(i);
     }
+    // the fork's IR playground recipe groups lead, before the stock groups (a visitor clicks one
+    // first); `BTreeMap` order keeps them 1 · Classic, 2 · Wild, 3 · Silly and the rest by name
+    let (ir, stock): (Vec<Group>, Vec<Group>) = by_name.into_values().partition(|g| g.ir);
     // starred presets first, in their own section, as Profiles does
     let starred: Vec<usize> = presets.iter().enumerate().filter(|(_, p)| p.favorite).map(|(i, _)| i).collect();
-    let favorites = (!starred.is_empty()).then(|| Group { name: "Favorites".into(), builtin: true, user: false, favorites: true, items: starred });
-    let groups = Arc::new(favorites.into_iter().chain(by_name.into_values()).collect::<Vec<_>>());
+    let favorites =
+        (!starred.is_empty()).then(|| Group { name: "Favorites".into(), builtin: true, user: false, ir: false, favorites: true, items: starred });
+    let groups = Arc::new(favorites.into_iter().chain(ir).chain(stock).collect::<Vec<_>>());
     ctx.data_mut(|d| d.insert_temp(id, (presets.generation(), groups.clone())));
     groups
+}
+
+/// One wrapped line of the start-here card: plain and semibold runs in the panel's small fonts,
+/// the strong parts standing in for the mock's bolding.
+fn card_job(t: &Tokens, w: f32, parts: &[(&str, bool)]) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob { wrap: egui::text::TextWrapping::wrap_at_width(w), ..Default::default() };
+    for (text, strong) in parts {
+        job.append(
+            crate::i18n::tr(text),
+            0.0,
+            egui::TextFormat { font_id: if *strong { t.semibold(11.5) } else { t.font(11.5) }, color: t.text_label, ..Default::default() },
+        );
+    }
+    job
+}
+
+/// The fork's IR playground start-here card, always shown above the preset groups: the recipe
+/// workflow in three steps, the share button and where more photos come from. Static highlights
+/// only (an accent tint and border): a pulsing glow would repaint every frame on the CPU renderer,
+/// and the card must stay compact — it may not push the IR groups below the fold of a 1080p window
+/// with the panel docked.
+fn start_card(app: &mut LightcraftApp, ui: &mut egui::Ui) {
+    let t = Tokens::get(ui.ctx());
+    let enabled = app.session.active().is_some();
+    ui.add_space(8.0);
+    let card =
+        egui::Frame::NONE.fill(t.accent.gamma_multiply(0.10)).inner_margin(egui::Margin { left: 16, right: 10, top: 8, bottom: 6 }).show(ui, |ui| {
+            ui.spacing_mut().item_spacing = vec2(2.0, 4.0);
+            let w = ui.available_width();
+            crate::widgets::announce_region(ui, egui::accesskit::Role::Note, crate::i18n::tr("IR playground: start here"));
+            ui.add(egui::Label::new(egui::RichText::new(crate::i18n::tr("IR playground: start here")).font(t.semibold(13.0)).color(t.text)));
+            ui.add(egui::Label::new(card_job(&t, w, &[("1. Click a recipe under ", false), ("IR Recipes", true), (".", false)])));
+            ui.add(egui::Label::new(card_job(
+                &t,
+                w,
+                &[("2. If its name says ", false), ("(pick …)", true), (": in ", false), ("Channel Mixer", true), (", click the picker", false)],
+            )));
+            // the Channel Mixer's own eyedropper (`Icon::Picker`), leading the sentence it picks up
+            ui.horizontal_wrapped(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+                paint(ui.painter(), r, Icon::Picker, t.accent);
+                ui.add(egui::Label::new(
+                    egui::RichText::new(crate::i18n::tr("then click what it names in the photo.")).font(t.font(11.5)).color(t.text_label),
+                ));
+            });
+            ui.horizontal_wrapped(|ui| {
+                ui.add(egui::Label::new(egui::RichText::new(crate::i18n::tr("3. Like it?")).font(t.font(11.5)).color(t.text_label)));
+                if crate::widgets::accent_button(ui, "shareIrEditCard", "Share This IR Edit…", enabled).clicked()
+                    && let Err(e) = app.run("dialog.shareIrEdit", json!({}))
+                {
+                    app.toast(ui.ctx(), e);
+                }
+                ui.add(egui::Label::new(
+                    egui::RichText::new(crate::i18n::tr("sends it to the recipe collection.")).font(t.font(11.5)).color(t.text_label),
+                ));
+            });
+            ui.add(egui::Label::new(
+                // `→` and not the menu triangle: that has no glyph outside craft-fonts (i18n tests)
+                egui::RichText::new(crate::i18n::tr("More photos: Help → Sample IR Photos. Your own raws: drag them in."))
+                    .font(t.font(11.0))
+                    .color(t.text_dim),
+            ));
+        });
+    // the accent left border, over the card's fill
+    let r = card.response.rect;
+    ui.painter().rect_filled(Rect::from_min_max(pos2(r.left(), r.top()), pos2(r.left() + 3.0, r.bottom())), 0.0, t.accent);
+    register(ui, "presetStartCard", r);
+    ui.add_space(4.0);
+}
+
+/// A brand-new library's opening layout (the fork's IR playground, a web first visit): the Presets
+/// column open and the Channel Mixer section expanded, so the visitor lands on the start-here
+/// card, the IR recipes and the mixer. The rest of the layout is left alone.
+pub fn first_visit_layout(ui: &mut crate::state::UiState) {
+    ui.presets = true;
+    if !ui.section_open("channelMixer") {
+        ui.open_sections.push("channelMixer".into());
+    }
 }
 
 /// The presets as the rows of a picker (a combo box's list), in list order with a header row

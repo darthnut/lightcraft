@@ -953,6 +953,43 @@ pub fn text_button_size(ui: &Ui, label: &str) -> f32 {
     text_button_width(galley.size().x)
 }
 
+/// `c` moved toward white by `f` (0..=1): the accent button's hovered fill.
+fn lighten(c: Color32, f: f32) -> Color32 {
+    let mix = |v: u8| (f32::from(v) + (255.0 - f32::from(v)) * f).round() as u8;
+    Color32::from_rgb(mix(c.r()), mix(c.g()), mix(c.b()))
+}
+
+/// The fork's IR playground draws its one primary action this way: a [`text_button`]-sized button
+/// filled with the theme's accent and white text, faded and inert while `enabled` is false. Only
+/// the Share IR Edit buttons use it.
+pub fn accent_button_at(ui: &mut Ui, id: &str, label: &str, r: Rect, enabled: bool) -> Response {
+    let label = crate::i18n::tr(label);
+    let t = Tokens::get(ui.ctx());
+    let resp = ui.interact(r, ui.scope_id().with(("accent-button", id)), if enabled { Sense::click() } else { Sense::hover() });
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, enabled, false, label.to_string()));
+    register(ui, format!("button:{id}"), r);
+    let text = if enabled { Color32::WHITE } else { Color32::WHITE.gamma_multiply(0.6) };
+    let galley = ui.painter().layout_no_wrap(label.to_string(), t.semibold(11.5), text);
+    let fill = if !enabled {
+        t.accent.gamma_multiply(0.45)
+    } else if resp.hovered() {
+        lighten(t.accent, 0.18)
+    } else {
+        t.accent
+    };
+    let p = ui.painter();
+    p.rect(r, CornerRadius::same(4), fill, Stroke::NONE, StrokeKind::Inside);
+    p.galley(r.center() - galley.size() / 2.0, galley, text);
+    resp
+}
+
+/// [`accent_button_at`], allocating its own row (the start-here card, the Channel Mixer section).
+pub fn accent_button(ui: &mut Ui, id: &str, label: &str, enabled: bool) -> Response {
+    let w = text_button_size(ui, label);
+    let (r, _) = ui.allocate_exact_size(vec2(w, 24.0), Sense::hover());
+    accent_button_at(ui, id, label, r, enabled)
+}
+
 /// A segmented control: `labels` share the available width equally, `per_row` per row. Each segment is
 /// addressable as `button:{id}-{key}` (keys parallel to labels). Returns the clicked index.
 pub fn segmented(ui: &mut Ui, id: &str, items: &[(&str, &str)], active: Option<usize>, per_row: usize) -> Option<usize> {
