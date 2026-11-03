@@ -170,28 +170,3 @@ pub fn open_on_github(app: &mut LightcraftApp, dlg: &Dialog) -> Result<Value, St
     }
     opened
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn probe() {
-        let pad = "A".repeat(10_000);
-        let payload = serde_json::json!({"presets": [{"settings": {"curve": {"pad": pad}, "light": {"exposure": 1}}}]}).to_string();
-        let (url, dropped) = super::issue_url("590 nm", "", None, None, &payload);
-        println!("PROBE len={} dropped={:?}", url.len(), dropped);
-        let mut v: serde_json::Value = serde_json::from_str(&payload).unwrap();
-        let before = v.to_string().len();
-        let matched = v
-            .get_mut("presets")
-            .and_then(serde_json::Value::as_array_mut)
-            .and_then(|a| a.first_mut())
-            .and_then(serde_json::Value::as_object_mut)
-            .is_some();
-        if let Some(o) =
-            v.get_mut("presets").and_then(serde_json::Value::as_array_mut).and_then(|a| a.first_mut()).and_then(serde_json::Value::as_object_mut)
-        {
-            o.remove("curve");
-        }
-        println!("STRIP matched={} {} -> {}", matched, before, v.to_string().len());
-    }
-}
