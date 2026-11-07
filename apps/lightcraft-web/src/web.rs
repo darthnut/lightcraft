@@ -147,12 +147,23 @@ async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
 /// files beside the site) says so and carries on.
 fn fetch_sample_photo(originals: Originals, backend: Option<Backend>, ctx: egui::Context, s: &lightcraft_ui_egui::samples::SamplePhoto) {
     // the sample's own static strings, so the async block needs no borrow of `s`
-    let (name, file) = (s.name, s.file);
-    notice(&format!("Downloading {name}…"));
+    wasm_bindgen_futures::spawn_local(fetch_sample(originals, backend, ctx, s.name, s.file));
+}
+
+async fn fetch_sample(originals: Originals, backend: Option<Backend>, ctx: egui::Context, name: &'static str, file: &'static str) {
+    notice(format!("Downloading {name}…"));
+    match fetch_bytes(&format!("sample/{file}")).await {
+        Ok(bytes) => store_file(originals, backend, file.to_string(), bytes, ctx).await,
+        Err(e) => notice(format!("{name} could not be downloaded ({e}). The sample photos ship as separate files next to the site.")),
+    }
+}
+
+/// A first visit's samples: all of them, one after another in table order, so the first (the
+/// one the visitor lands on) arrives as fast as it would alone and the rest fill in behind it.
+fn fetch_all_samples(originals: Originals, backend: Option<Backend>, ctx: egui::Context) {
     wasm_bindgen_futures::spawn_local(async move {
-        match fetch_bytes(&format!("sample/{file}")).await {
-            Ok(bytes) => store_file(originals, backend, file.to_string(), bytes, ctx).await,
-            Err(e) => notice(&format!("{name} could not be downloaded ({e}). The sample photos ship as separate files next to the site.")),
+        for s in lightcraft_ui_egui::samples::SAMPLES {
+            fetch_sample(originals.clone(), backend.clone(), ctx.clone(), s.name, s.file).await;
         }
     });
 }
@@ -571,6 +582,11 @@ struct WebApp {
     last_save: f64,
     ui_written: Vec<u8>,
     bridge: Option<crate::host::Bridge>,
+    /// A first visit's sample to open once it is imported (the first in the table), then `None`:
+    /// the rest arrive behind it without moving the selection.
+    land_on: Option<&'static str>,
+    /// A first visit's samples are still arriving (until the last one in the table is imported).
+    samples_arriving: bool,
 }
 
 /// The browser host's drop queues, taken only through the shared gate: a prompt or blocking
@@ -621,7 +637,8 @@ impl WebApp {
         let read_failed = load_error.is_some();
         let opened = match load_error {
             Some(e) => Err(format!("{e}. Nothing was changed in storage")),
-            None => session.open_library_in(stores, true).cloned().map_err(|e| e.to_string()),
+            // the IR playground seeds no demo photos: a first visit gets the sample IR photos
+            None => session.open_library_in(stores, false).cloned().map_err(|e| e.to_string()),
         };
         let mut created = false;
         match opened {
@@ -709,13 +726,14 @@ impl WebApp {
             }
         }
         if created && backend.is_some() {
-            // a brand-new library (first visit): land the visitor on an IR photo — one raw, not
-            // all four — through the same dropped-file path the menu items use, with the panels
-            // that teach the workflow open: the Presets column (its start-here card and the IR
-            // recipes) and the Channel Mixer section
+            // a brand-new library (first visit): the sample IR photos, not demo ones, through the
+            // same dropped-file path the menu items use, with the panels that teach the workflow
+            // open: the Presets column (its start-here card and the IR recipes) and the Channel
+            // Mixer section
             lightcraft_ui_egui::panels::presets::first_visit_layout(&mut app.ui);
-            fetch_sample_photo(originals.clone(), backend.clone(), cc.egui_ctx.clone(), &lightcraft_ui_egui::samples::SAMPLES[0]);
+            fetch_all_samples(originals.clone(), backend.clone(), cc.egui_ctx.clone());
         }
+        let land_on = (created && backend.is_some()).then(|| lightcraft_ui_egui::samples::SAMPLES[0].file);
         let origin = lightcraft_ui_egui::monotonic_ms();
         WebApp {
             app,
@@ -733,6 +751,8 @@ impl WebApp {
             last_save: 0.0,
             ui_written,
             bridge,
+            land_on,
+            samples_arriving: land_on.is_some(),
         }
     }
 
@@ -801,18 +821,39 @@ impl WebApp {
         }
         let Some(paths) = drained.pending else { return };
         if !paths.is_empty() {
+            // a first visit's samples arriving behind the one it opened don't take over the
+            // selection (as the engine's auto-import keeps it), nor toast one by one
+            use lightcraft_ui_egui::samples::SAMPLES;
+            let is_file = |p: &String, file: &str| p.ends_with(&format!("/{file}"));
+            let keep = (self.samples_arriving && self.land_on.is_none() && paths.iter().all(|p| SAMPLES.iter().any(|s| is_file(p, s.file))))
+                .then(|| self.app.session.selection.clone());
+            if SAMPLES.last().is_some_and(|last| paths.iter().any(|p| is_file(p, last.file))) {
+                self.samples_arriving = false;
+            }
             match self.app.run("library.import", json!({"paths": paths})) {
                 // what the import did, not what was submitted: duplicates and unsupported files add nothing,
                 // a drop that only finds duplicates says nothing (as the desktop import's toast does when it
                 // shows where they are), and one whose files could not be read says so
                 Ok(report) => {
-                    if let Some(notice) = lightcraft_ui_egui::i18n::dropped_photos_outcome(&report) {
+                    if let Some(sel) = keep {
+                        self.app.session.selection = sel;
+                    } else if let Some(notice) = lightcraft_ui_egui::i18n::dropped_photos_outcome(&report) {
                         self.app.toast(ctx, notice);
                     }
                 }
                 Err(e) => {
                     log::warn!("import: {e}");
                     self.app.toast(ctx, lightcraft_ui_egui::i18n::dropped_import_failed(&e));
+                }
+            }
+            // a first visit opens its first sample as soon as that is in, whatever else arrived
+            if let Some(file) = self.land_on {
+                let suffix = format!("/{file}");
+                let id =
+                    self.app.session.catalog.photos().find(|p| matches!(&p.source, Source::File { path } if path.ends_with(&suffix))).map(|p| p.id);
+                if let Some(id) = id {
+                    self.land_on = None;
+                    let _ = self.app.run("library.select", json!({"ids": [id.0]}));
                 }
             }
         }
