@@ -11,8 +11,8 @@ pub struct SamplePhoto {
     pub name: &'static str,
 }
 
-/// The samples, in menu order. The first is what a first visit fetches (one raw, ~25 MB: a
-/// first-time visitor should not download all four).
+/// The samples, in menu order. A first visit fetches all four (~25 MB each), one after another in
+/// this order, so the first is the one the visitor lands on.
 pub const SAMPLES: &[SamplePhoto] = &[
     SamplePhoto { id: "sample.mt-hood", file: "DSC03220.ARW", name: "Mt. Hood" },
     SamplePhoto { id: "sample.forest-road", file: "DSC03584.ARW", name: "Forest Road" },
