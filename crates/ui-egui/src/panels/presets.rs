@@ -82,20 +82,16 @@ impl AppliedByPhoto {
     }
 }
 
-/// The IR playground's re-pick: where the last Neutral pick on each photo was, whether it was made
-/// on foliage (the photo's last recipe said "(pick foliage)") or on snow, cloud or concrete, and the
-/// Exposure that pick added. A recipe of the same kind re-runs the pick there (`preset.apply`'s
-/// `neutralAt`), taking that Exposure back first, so one pick carries across every recipe that
-/// wants the same neutral point and switching recipes never piles raise on raise.
+/// The IR playground's re-pick: where the last Neutral pick on each photo was, and whether it was
+/// made on foliage (the photo's last recipe said "(pick foliage)") or on snow, cloud or concrete.
+/// A recipe of the same kind re-runs the pick there (`preset.apply`'s `neutralAt`), so one pick
+/// carries across every recipe that wants the same neutral point. The pick lands the spot at its
+/// own brightness and never touches Exposure, so nothing piles up as recipes change.
 #[derive(Clone, Copy)]
 struct Spot {
     x: f64,
     y: f64,
     foliage: bool,
-    /// the brightness the visitor's own pick gave the spot: every re-picked recipe lands there
-    level: f64,
-    /// the Exposure the picks still in effect have added (a re-pick takes it back first)
-    raised: f64,
 }
 
 #[derive(Clone, Default)]
@@ -109,10 +105,8 @@ fn wants_foliage(name: &str) -> bool {
     name.contains("(pick foliage)")
 }
 
-/// Remember a Neutral pick at (x, y) on the active photo that left the spot at brightness `level`
-/// and added `added` to Exposure (the Channel Mixer's picker calls this). A pick made over an
-/// earlier one adds to its raise rather than replacing it: both are still in Exposure.
-pub fn remember_neutral_pick(ctx: &egui::Context, session: &lightcraft_engine::Session, x: f64, y: f64, level: f64, added: f64) {
+/// Remember a Neutral pick at (x, y) on the active photo (the Channel Mixer's picker calls this).
+pub fn remember_neutral_pick(ctx: &egui::Context, session: &lightcraft_engine::Session, x: f64, y: f64) {
     let Some(photo) = session.active() else { return };
     let last: Option<AppliedByPhoto> = ctx.data(|d| d.get_temp(egui::Id::unique(AppliedByPhoto::ID)));
     let foliage = last
@@ -121,20 +115,8 @@ pub fn remember_neutral_pick(ctx: &egui::Context, session: &lightcraft_engine::S
         .unwrap_or(false);
     let id = egui::Id::unique(NeutralSpots::ID);
     let mut spots: NeutralSpots = ctx.data(|d| d.get_temp(id)).unwrap_or_default();
-    let raised = spots.0.get(&photo).map_or(0.0, |s| s.raised) + added;
-    spots.0.insert(photo, Spot { x, y, foliage, level, raised });
+    spots.0.insert(photo, Spot { x, y, foliage });
     ctx.data_mut(|d| d.insert_temp(id, spots));
-}
-
-/// After a re-pick: the Exposure the new pick added replaces the old one.
-fn update_raise(ctx: &egui::Context, photo: Option<lightcraft_catalog::PhotoId>, raised: f64) {
-    let Some(photo) = photo else { return };
-    let id = egui::Id::unique(NeutralSpots::ID);
-    let mut spots: NeutralSpots = ctx.data(|d| d.get_temp(id)).unwrap_or_default();
-    if let Some(s) = spots.0.get_mut(&photo) {
-        s.raised = raised;
-        ctx.data_mut(|d| d.insert_temp(id, spots));
-    }
 }
 
 /// The spot to re-pick when `preset` goes on `photo`: an IR recipe that asks for a pick, of the same
@@ -154,22 +136,14 @@ fn apply_params(ctx: &egui::Context, session: &lightcraft_engine::Session, pid: 
     if let Some(pr) = session.presets.iter().find(|p| p.id == pid)
         && let Some(s) = neutral_spot(ctx, session.active(), pr)
     {
-        p["neutralAt"] = json!({"x": s.x, "y": s.y, "level": s.level, "exposureAdded": s.raised});
+        p["neutralAt"] = json!({"x": s.x, "y": s.y});
     }
     p
 }
 
-/// Apply a preset (with the re-pick when there is one), keeping the re-pick's Exposure raise.
+/// Apply a preset, with the re-pick when there is one.
 fn apply_preset(app: &mut LightcraftApp, ctx: &egui::Context, pid: &str, amount: f64) -> bool {
-    match app.run("preset.apply", apply_params(ctx, &app.session, pid, amount)) {
-        Ok(r) => {
-            if r["repicked"] == true {
-                update_raise(ctx, app.session.active(), r["exposureAdded"].as_f64().unwrap_or(0.0));
-            }
-            true
-        }
-        Err(_) => false,
-    }
+    app.run("preset.apply", apply_params(ctx, &app.session, pid, amount)).is_ok()
 }
 
 /// The Presets panel: the Favorites section of starred presets on top (issue #1999), then the
@@ -322,7 +296,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                     // as clicking it will
                     if let (Some(id), Some(l)) = (active, look.as_ref())
                         && let Some(sp) = neutral_spot(ui.ctx(), active, &pr)
-                        && let Some((picked, _)) = app.session.mixer_repick(id, &pr.settings, l, (sp.x, sp.y), Some(sp.level), sp.raised)
+                        && let Some(picked) = app.session.mixer_repick(id, l, (sp.x, sp.y))
                     {
                         look = Some(picked);
                     }
