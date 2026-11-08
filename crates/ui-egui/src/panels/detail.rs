@@ -1033,6 +1033,10 @@ fn general_interaction(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::
             // section's eye is off, where the raise would not render and the photo keeps the darkening
             match app.run_typed("develop.mixerNeutralPick", json!({"x": n.x, "y": n.y})) {
                 Ok(r) => {
+                    // the IR playground: recipes clicked after this re-pick here
+                    let added = r["exposureAdded"].as_f64().unwrap_or(0.0);
+                    let level = r["level"].as_f64().unwrap_or(0.0);
+                    crate::panels::presets::remember_neutral_pick(ui.ctx(), &app.session, n.x as f64, n.y as f64, level, added);
                     let raised = r["exposureAdded"].as_f64().unwrap_or(0.0);
                     if r["lightOff"] == true {
                         app.toast(ui.ctx(), crate::i18n::tr("Darker: the Light section is off, so Exposure can't compensate"));

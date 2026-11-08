@@ -354,6 +354,21 @@ fn luminance(c: [f64; 3]) -> f64 {
 /// component ≤ 1e-6, or not a number) or the gains come out non-finite or non-positive; nothing is
 /// changed then.
 pub fn mixer_neutral(m: &ChannelMixer, c: [f64; 3], calib: Option<[[f64; 3]; 3]>, mixer_rendered: bool) -> Result<(ChannelMixer, f64), &'static str> {
+    mixer_neutral_at_level(m, c, calib, mixer_rendered, None).map(|(mixer, scaled, _)| (mixer, scaled))
+}
+
+/// [`mixer_neutral`] with the brightness the point comes out at given (`level`: the neutral's
+/// Rec.2020 luminance, before Exposure and the ±200 % scaling) instead of taken from what the spot
+/// rendered before the pick; also returns the level used. The IR playground's re-pick passes the
+/// level the visitor's own pick produced, so every recipe lands at that brightness rather than at
+/// whatever the unbalanced recipe happened to make of the spot.
+pub fn mixer_neutral_at_level(
+    m: &ChannelMixer,
+    c: [f64; 3],
+    calib: Option<[[f64; 3]; 3]>,
+    mixer_rendered: bool,
+    level: Option<f64>,
+) -> Result<(ChannelMixer, f64, f64), &'static str> {
     let rows = m.rows().map(|r| r.map(|v| v.clamp(-200.0, 200.0) / 100.0));
     if c.iter().any(|v| !(v.is_finite() && *v > 1e-6)) {
         return Err(MIXER_NEUTRAL_ERROR);
@@ -370,7 +385,7 @@ pub fn mixer_neutral(m: &ChannelMixer, c: [f64; 3], calib: Option<[[f64; 3]; 3]>
     // mixer's input, when the mixer's own section was off and the render skipped it
     let pre =
         if mixer_rendered { calib.map_or_else(|| mat.apply(c), |cm| Mat3(cm).apply(mat.apply(c))) } else { calib.map_or(c, |cm| Mat3(cm).apply(c)) };
-    let q = luminance(pre.map(|v| v.max(0.0)));
+    let q = level.unwrap_or_else(|| luminance(pre.map(|v| v.max(0.0))));
     let g = [q * u[0] / c[0], q * u[1] / c[1], q * u[2] / c[2]];
     if !(q.is_finite() && q > 0.0) || g.iter().any(|v| !(v.is_finite() && *v > 0.0)) {
         return Err(MIXER_NEUTRAL_ERROR);
@@ -391,7 +406,7 @@ pub fn mixer_neutral(m: &ChannelMixer, c: [f64; 3], calib: Option<[[f64; 3]; 3]>
     let max = new.iter().flatten().map(|v| v.abs()).fold(0.0, f64::max);
     let scaled = if max > 2.0 { 2.0 / max } else { 1.0 };
     let row = |r: usize| MixRow { red: new[r][0] * scaled * 100.0, green: new[r][1] * scaled * 100.0, blue: new[r][2] * scaled * 100.0 };
-    Ok((ChannelMixer { red: row(0), green: row(1), blue: row(2) }, scaled))
+    Ok((ChannelMixer { red: row(0), green: row(1), blue: row(2) }, scaled, q))
 }
 
 /// Shadows-tint strength at ±100: the green channel's relative change in deep shadows.

@@ -184,3 +184,82 @@ fn the_top_bar_share_button_fits_beside_the_icons() {
     let appearance = rect(&h, "icon:appearance").unwrap();
     assert!(!filter.intersects(appearance), "the bar is laid out as before");
 }
+
+/// The re-pick: a Neutral pick on the photo carries to the next recipe that asks for the same kind
+/// of neutral point (re-run at the same spot, in the recipe's own undo step), not to a "(pick
+/// foliage)" recipe, and the hover preview shows what the click will give.
+#[test]
+fn a_neutral_pick_carries_to_the_next_recipe() {
+    let mut h = app();
+    let mixer = |h: &Headless| {
+        let id = h.app.session.active().unwrap();
+        h.app.session.develop_of(id).unwrap().channel_mixer
+    };
+    let recipe = |h: &Headless, pid: &str| {
+        let pr = h.app.session.presets.iter().find(|p| p.id == pid).unwrap();
+        serde_json::from_value::<lightcraft_develop::ChannelMixer>(pr.settings["channel_mixer"].clone()).unwrap()
+    };
+    assert_eq!(click(&mut h, "preset:ir-recipe-classic-swap")["ok"], true);
+    assert_eq!(mixer(&h), recipe(&h, "ir-recipe-classic-swap"));
+
+    // pick on the photo, through the picker tool, at a spot the maths accepts
+    let img = rect(&h, "canvas:image").expect("the photo is drawn");
+    let mut picked = None;
+    let mut at = (0.0, 0.0);
+    'grid: for fy in [0.5f32, 0.3, 0.7, 0.4, 0.6] {
+        for fx in [0.5f32, 0.3, 0.7, 0.4, 0.6] {
+            h.app.ui.tool = "mixerPicker".into();
+            let before = mixer(&h);
+            let (x, y) = (img.left() + fx * img.width(), img.top() + fy * img.height());
+            h.request("ui.click", json!({"x": x, "y": y}), T);
+            h.step();
+            h.step();
+            if mixer(&h) != before {
+                picked = Some(mixer(&h));
+                at = (x, y);
+                break 'grid;
+            }
+        }
+    }
+    let picked = picked.expect("some spot on the demo photo can be made neutral");
+    assert_ne!(picked, recipe(&h, "ir-recipe-classic-swap"));
+
+    // the next recipe of the same kind arrives re-picked, not as its stored mixer
+    let aero = recipe(&h, "ir-recipe-aerochrome");
+    h.request("ui.hoverWidget", json!({"id": "preset:ir-recipe-aerochrome"}), T);
+    h.step();
+    let preview = h.app.hover_preview.as_ref().map(|p| p.settings.channel_mixer);
+    assert_eq!(click(&mut h, "preset:ir-recipe-aerochrome")["ok"], true);
+    let now = mixer(&h);
+    assert_ne!(now, aero, "Faux Aerochrome was re-picked");
+    assert_eq!(preview, Some(now), "the hover preview showed the re-picked recipe");
+    // one undo takes the recipe and its re-pick together
+    h.app.run("edit.undo", json!({})).unwrap();
+    h.step();
+    assert_eq!(mixer(&h), picked, "one undo step back to the first pick");
+
+    // switching recipes back and forth never piles Exposure up: each recipe lands at the same
+    // Exposure every time, and a recipe's re-pick replaces the previous one's raise
+    let exposure = |h: &Headless| {
+        let id = h.app.session.active().unwrap();
+        h.app.session.develop_of(id).unwrap().light.exposure
+    };
+    let mut seen = Vec::new();
+    for pid in ["ir-recipe-fake-summer", "ir-recipe-aerochrome", "ir-recipe-fake-summer", "ir-recipe-aerochrome", "ir-recipe-fake-summer"] {
+        assert_eq!(click(&mut h, &format!("preset:{pid}"))["ok"], true);
+        seen.push(exposure(&h));
+    }
+    assert!((seen[0] - seen[2]).abs() < 1e-9 && (seen[2] - seen[4]).abs() < 1e-9, "Fake Summer keeps its Exposure: {seen:?}");
+    assert!((seen[1] - seen[3]).abs() < 1e-9, "Faux Aerochrome keeps its Exposure: {seen:?}");
+    // a second pick by hand over a re-picked recipe still leaves nothing behind on the next switch
+    h.app.ui.tool = "mixerPicker".into();
+    h.request("ui.click", json!({"x": at.0, "y": at.1}), T);
+    h.step();
+    h.step();
+    assert_eq!(click(&mut h, "preset:ir-recipe-fake-summer")["ok"], true);
+    assert!((exposure(&h) - seen[0]).abs() < 1e-9, "after a hand pick too: {} vs {}", exposure(&h), seen[0]);
+
+    // a recipe that wants foliage as its neutral point does not inherit a snow pick
+    assert_eq!(click(&mut h, "preset:ir-recipe-white-foliage")["ok"], true);
+    assert_eq!(mixer(&h), recipe(&h, "ir-recipe-white-foliage"));
+}
