@@ -77,8 +77,8 @@
       }
     },
     {
-      "id": "ir-recipe-hood-river-pink",
-      "name": "Hood River Pink (pick snow/cloud/concrete)",
+      "id": "ir-recipe-mt-hood-pink",
+      "name": "Mt Hood Pink (pick snow/cloud/concrete)",
       "group": "IR Recipes 1 \u00b7 Classic",
       "settings": {
         "wb": {
