@@ -30,7 +30,49 @@
           }
         },
         "color": {
-          "vibrance": 15
+          "vibrance": 15,
+          "saturation": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -75,7 +117,36 @@
         },
         "curve": {
           "darks": 19,
-          "highlights": -36
+          "highlights": -36,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -107,7 +178,49 @@
           }
         },
         "color": {
-          "vibrance": 10
+          "vibrance": 10,
+          "saturation": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -139,7 +252,49 @@
           }
         },
         "color": {
-          "vibrance": 10
+          "vibrance": 10,
+          "saturation": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -171,7 +326,8 @@
           }
         },
         "color": {
-          "vibrance": 20
+          "vibrance": 20,
+          "saturation": 0
         },
         "light": {
           "contrast": -15
@@ -184,7 +340,35 @@
           "shadows": {
             "hue": 200,
             "sat": 10
+          },
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
           }
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grain": {
+          "amount": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -193,6 +377,9 @@
       "name": "IR Mono, Wood Effect (no pick)",
       "group": "IR Recipes 1 \u00b7 Classic",
       "settings": {
+        "wb": {
+          "mode": "asShot"
+        },
         "channel_mixer": {
           "red": {
             "red": 100,
@@ -215,6 +402,45 @@
         },
         "effects": {
           "clarity": 15
+        },
+        "color": {
+          "saturation": 0,
+          "vibrance": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -223,6 +449,9 @@
       "name": "IR Mono, Soft Glow (no pick)",
       "group": "IR Recipes 1 \u00b7 Classic",
       "settings": {
+        "wb": {
+          "mode": "asShot"
+        },
         "channel_mixer": {
           "red": {
             "red": 100,
@@ -245,6 +474,45 @@
         },
         "effects": {
           "clarity": -30
+        },
+        "color": {
+          "saturation": 0,
+          "vibrance": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -276,7 +544,49 @@
           }
         },
         "color": {
-          "vibrance": 10
+          "vibrance": 10,
+          "saturation": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -306,6 +616,51 @@
             "green": 110,
             "blue": -30
           }
+        },
+        "color": {
+          "saturation": 0,
+          "vibrance": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -335,6 +690,51 @@
             "green": 50,
             "blue": 200
           }
+        },
+        "color": {
+          "saturation": 0,
+          "vibrance": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -366,7 +766,49 @@
           }
         },
         "color": {
-          "vibrance": 15
+          "vibrance": 15,
+          "saturation": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -396,6 +838,51 @@
             "green": -10,
             "blue": 80
           }
+        },
+        "color": {
+          "saturation": 0,
+          "vibrance": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -404,6 +891,9 @@
       "name": "Night Vision Goggles (no pick)",
       "group": "IR Recipes 3 \u00b7 Silly",
       "settings": {
+        "wb": {
+          "mode": "asShot"
+        },
         "channel_mixer": {
           "red": {
             "red": 20,
@@ -429,6 +919,42 @@
         },
         "grain": {
           "amount": 45
+        },
+        "color": {
+          "saturation": 0,
+          "vibrance": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grading": {
+          "global": {
+            "hue": 0,
+            "lum": 0,
+            "sat": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
+          }
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
         }
       }
     },
@@ -460,17 +986,49 @@
           }
         },
         "light": {
-          "exposure": -1.8,
           "contrast": 20
         },
         "color": {
-          "saturation": -40
+          "saturation": -40,
+          "vibrance": 0
+        },
+        "curve": {
+          "highlights": -100,
+          "lights": -100,
+          "darks": -80,
+          "shadows": -60
         },
         "grading": {
           "global": {
             "hue": 220,
-            "sat": 35
+            "sat": 35,
+            "lum": -60
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
           }
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grain": {
+          "amount": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     },
@@ -504,11 +1062,47 @@
         "grading": {
           "global": {
             "hue": 22,
-            "sat": 40
+            "sat": 40,
+            "lum": 0
+          },
+          "highlights": {
+            "hue": 0,
+            "sat": 0
+          },
+          "shadows": {
+            "hue": 0,
+            "sat": 0
           }
         },
         "color": {
-          "vibrance": 20
+          "vibrance": 20,
+          "saturation": 0
+        },
+        "curve": {
+          "darks": 0,
+          "highlights": 0,
+          "lights": 0,
+          "shadows": 0
+        },
+        "effects": {
+          "clarity": 0
+        },
+        "grain": {
+          "amount": 0
+        },
+        "light": {
+          "contrast": 0
+        },
+        "mixer": {
+          "magenta": {
+            "hue": 0
+          },
+          "purple": {
+            "hue": 0
+          }
+        },
+        "vignette": {
+          "amount": 0
         }
       }
     }
