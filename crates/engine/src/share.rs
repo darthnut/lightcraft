@@ -11,9 +11,10 @@ use crate::export::{ExportFormat, ExportOptions, MetadataPolicy, OutputSpace, Re
 use crate::presets::{LCPRESET_FORMAT, PresetFile};
 
 /// The settings groups a shared look is made of: white balance, Light, the tone curve, Color
-/// (vibrance/saturation), the HSL mixer, colour grading, calibration — and the channel mixer,
-/// materialized even when it is the identity (`extract_groups` uses `to_json_with_mixer`), so
-/// importing a shared edit resets a mixed photo. Nothing photo-specific (no crop, masks, spots).
+/// (vibrance/saturation), the HSL mixer, colour grading, calibration — and the channel mixer (its
+/// own group since it left Color Mixer), materialized even when it is the identity
+/// (`extract_groups` uses `to_json_with_mixer`), so importing a shared edit resets a mixed photo.
+/// Nothing photo-specific (no crop, masks, spots).
 const SHARE_GROUPS: &[SettingsGroup] = &[
     SettingsGroup::WhiteBalance,
     SettingsGroup::Light,
@@ -21,6 +22,7 @@ const SHARE_GROUPS: &[SettingsGroup] = &[
     SettingsGroup::Color,
     SettingsGroup::ColorMixer,
     SettingsGroup::ColorGrading,
+    SettingsGroup::ChannelMixer,
     SettingsGroup::Calibration,
 ];
 
