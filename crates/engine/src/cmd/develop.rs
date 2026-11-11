@@ -327,7 +327,7 @@ pub(crate) fn neutral_pick(s: &mut Session, id: PhotoId, d: &DevelopSettings, x:
     // modelled here: the pick neutralizes for the photo as a whole, not per masked
     // region. The channel mixer itself keeps its own eye (below): `effective()` never
     // resets it.
-    let sample = sample_point(&src, &d, x, y);
+    let sample = sample_point(&src, d, x, y);
     let c = lightcraft_pipeline::local::wb_matrix_for(&info, &d.effective()).map_or(sample, |m| {
         [
             m[0][0] * sample[0] + m[0][1] * sample[1] + m[0][2] * sample[2],
@@ -1436,52 +1436,60 @@ pub fn specs() -> Vec<CommandSpec> {
             }
         ),
         // ---- presets
-        cmd!("preset.apply", "Apply Preset", [], None, "{id: presetId, amount?: 0..200 (percent), ids?, neutralAt?: {x, y} (IR playground: re-run the Neutral pick there on the active photo, same undo step) → {repicked: true} when it ran", has_selection, |s, p| {
-            let pid = str_param(p, "id").ok_or_else(|| bad("preset.apply", "missing id"))?;
-            let preset = s.presets.iter().find(|x| x.id == pid).cloned().ok_or_else(|| bad("preset.apply", format!("unknown preset `{pid}`")))?;
-            let amount = f64_or(p, "amount", 100.0).clamp(0.0, 200.0) / 100.0;
-            let neutral_at = p.get("neutralAt").and_then(|n| Some((n.get("x")?.as_f64()?, n.get("y")?.as_f64()?)));
-            let mut repicked = false;
-            // `id` names the preset here: the photos are `ids`, else the selection
-            let ids = s.targets(&json!({"ids": p.get("ids")}))?;
-            let photos: Vec<_> = ids.iter().filter_map(|id| s.develop_of(*id).map(|d| (*id, d))).collect();
-            let ops = photos
-                .into_iter()
-                .filter_map(|(id, d)| {
-                    // a hand-written preset may name one white balance number only, and then it means the same as
-                    // a partial: bring the photo onto that scale first, with its own as-shot white, and put the
-                    // result back on the scale the photo is edited on (issue #2910) — the merge `develop.merge` uses
-                    let info = s.source_info(id);
-                    let prepared = prepare_photo_for_wb_partial(&d, &preset.settings, &info);
-                    let on_kelvin_scale = prepared.is_some() && info.raw && !info.relative_wb;
-                    let base: &DevelopSettings = prepared.as_ref().unwrap_or(&d);
-                    // Amount is measured from the import look only when the photo has one.
-                    // Otherwise the current settings (on the partial's WB scale) are its baseline.
-                    let imported = s.catalog.photo(id).filter(|p| p.import_look.is_some() && amount != 1.0).map(|p| p.import_defaults());
-                    let prepared_import =
-                        imported.as_ref().map(|d| prepare_photo_for_wb_partial(d, &preset.settings, &info).unwrap_or_else(|| d.clone()));
-                    let original = prepared_import.as_ref().unwrap_or(base);
-                    let mut next = preset.apply_on(base, original, amount);
-                    if on_kelvin_scale {
-                        lightcraft_pipeline::local::normalize_wb(&mut next, &info);
-                    }
-                    // the IR playground's re-pick: the active photo's Neutral pick, run again at the
-                    // same spot over the recipe's mixer, in the recipe's own undo step (a refused pick
-                    // leaves the recipe as it is)
-                    if Some(id) == s.active()
-                        && let Some(spot) = neutral_at
-                        && let Some(picked) = s.mixer_repick(id, &next, spot)
-                    {
-                        next = picked;
-                        repicked = true;
-                    }
-                    s.develop_op(id, next, &format!("Preset: {}", preset.name))
-                })
-                .collect::<Vec<_>>();
-            s.commit(&format!("Preset: {}", preset.name), Op::Batch { ops })?;
-            // null as before, unless the IR playground's re-pick ran
-            Ok(if repicked { json!({"repicked": true}) } else { Value::Null })
-        }),
+        cmd!(
+            "preset.apply",
+            "Apply Preset",
+            [],
+            None,
+            "{id: presetId, amount?: 0..200 (percent), ids?, neutralAt?: {x, y} (IR playground: re-run the Neutral pick there on the active photo, same undo step) → {repicked: true} when it ran",
+            has_selection,
+            |s, p| {
+                let pid = str_param(p, "id").ok_or_else(|| bad("preset.apply", "missing id"))?;
+                let preset = s.presets.iter().find(|x| x.id == pid).cloned().ok_or_else(|| bad("preset.apply", format!("unknown preset `{pid}`")))?;
+                let amount = f64_or(p, "amount", 100.0).clamp(0.0, 200.0) / 100.0;
+                let neutral_at = p.get("neutralAt").and_then(|n| Some((n.get("x")?.as_f64()?, n.get("y")?.as_f64()?)));
+                let mut repicked = false;
+                // `id` names the preset here: the photos are `ids`, else the selection
+                let ids = s.targets(&json!({"ids": p.get("ids")}))?;
+                let photos: Vec<_> = ids.iter().filter_map(|id| s.develop_of(*id).map(|d| (*id, d))).collect();
+                let ops = photos
+                    .into_iter()
+                    .filter_map(|(id, d)| {
+                        // a hand-written preset may name one white balance number only, and then it means the same as
+                        // a partial: bring the photo onto that scale first, with its own as-shot white, and put the
+                        // result back on the scale the photo is edited on (issue #2910) — the merge `develop.merge` uses
+                        let info = s.source_info(id);
+                        let prepared = prepare_photo_for_wb_partial(&d, &preset.settings, &info);
+                        let on_kelvin_scale = prepared.is_some() && info.raw && !info.relative_wb;
+                        let base: &DevelopSettings = prepared.as_ref().unwrap_or(&d);
+                        // Amount is measured from the import look only when the photo has one.
+                        // Otherwise the current settings (on the partial's WB scale) are its baseline.
+                        let imported = s.catalog.photo(id).filter(|p| p.import_look.is_some() && amount != 1.0).map(|p| p.import_defaults());
+                        let prepared_import =
+                            imported.as_ref().map(|d| prepare_photo_for_wb_partial(d, &preset.settings, &info).unwrap_or_else(|| d.clone()));
+                        let original = prepared_import.as_ref().unwrap_or(base);
+                        let mut next = preset.apply_on(base, original, amount);
+                        if on_kelvin_scale {
+                            lightcraft_pipeline::local::normalize_wb(&mut next, &info);
+                        }
+                        // the IR playground's re-pick: the active photo's Neutral pick, run again at the
+                        // same spot over the recipe's mixer, in the recipe's own undo step (a refused pick
+                        // leaves the recipe as it is)
+                        if Some(id) == s.active()
+                            && let Some(spot) = neutral_at
+                            && let Some(picked) = s.mixer_repick(id, &next, spot)
+                        {
+                            next = picked;
+                            repicked = true;
+                        }
+                        s.develop_op(id, next, &format!("Preset: {}", preset.name))
+                    })
+                    .collect::<Vec<_>>();
+                s.commit(&format!("Preset: {}", preset.name), Op::Batch { ops })?;
+                // null as before, unless the IR playground's re-pick ran
+                Ok(if repicked { json!({"repicked": true}) } else { Value::Null })
+            }
+        ),
         cmd!("preset.create", "Create Preset", ["Photo"], None, "{name, group?, groups?: [settingsGroup]}", has_active, |s, p| {
             let c = "preset.create";
             let id = active(s, c)?;
