@@ -1265,6 +1265,8 @@ fn general_interaction(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::
             let mut pick_again = false;
             match app.run_typed("develop.mixerNeutralPick", json!({"x": n.x, "y": n.y})) {
                 Ok(r) => {
+                    // the IR playground: recipes clicked after this re-pick here
+                    crate::panels::presets::remember_neutral_pick(ui.ctx(), &app.session, n.x as f64, n.y as f64);
                     let darker = r["darker"].as_f64().unwrap_or(0.0);
                     if darker >= 0.05 {
                         app.toast(

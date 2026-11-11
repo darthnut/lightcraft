@@ -82,6 +82,70 @@ impl AppliedByPhoto {
     }
 }
 
+/// The IR playground's re-pick: where the last Neutral pick on each photo was, and whether it was
+/// made on foliage (the photo's last recipe said "(pick foliage)") or on snow, cloud or concrete.
+/// A recipe of the same kind re-runs the pick there (`preset.apply`'s `neutralAt`), so one pick
+/// carries across every recipe that wants the same neutral point. The pick lands the spot at its
+/// own brightness and never touches Exposure, so nothing piles up as recipes change.
+#[derive(Clone, Copy)]
+struct Spot {
+    x: f64,
+    y: f64,
+    foliage: bool,
+}
+
+#[derive(Clone, Default)]
+struct NeutralSpots(std::collections::HashMap<lightcraft_catalog::PhotoId, Spot>);
+
+impl NeutralSpots {
+    const ID: &'static str = "ir-neutral-spots";
+}
+
+fn wants_foliage(name: &str) -> bool {
+    name.contains("(pick foliage)")
+}
+
+/// Remember a Neutral pick at (x, y) on the active photo (the Channel Mixer's picker calls this).
+pub fn remember_neutral_pick(ctx: &egui::Context, session: &lightcraft_engine::Session, x: f64, y: f64) {
+    let Some(photo) = session.active() else { return };
+    let last: Option<AppliedByPhoto> = ctx.data(|d| d.get_temp(egui::Id::unique(AppliedByPhoto::ID)));
+    let foliage = last
+        .and_then(|m| m.0.get(&photo).map(|(pid, _)| pid.clone()))
+        .and_then(|pid| session.presets.iter().find(|p| p.id == pid).map(|p| wants_foliage(&p.name)))
+        .unwrap_or(false);
+    let id = egui::Id::unique(NeutralSpots::ID);
+    let mut spots: NeutralSpots = ctx.data(|d| d.get_temp(id)).unwrap_or_default();
+    spots.0.insert(photo, Spot { x, y, foliage });
+    ctx.data_mut(|d| d.insert_temp(id, spots));
+}
+
+/// The spot to re-pick when `preset` goes on `photo`: an IR recipe that asks for a pick, of the same
+/// kind (foliage or not) as the photo's last pick.
+fn neutral_spot(ctx: &egui::Context, photo: Option<lightcraft_catalog::PhotoId>, preset: &Preset) -> Option<Spot> {
+    if !preset.id.starts_with("ir-recipe-") || !preset.name.contains("(pick ") {
+        return None;
+    }
+    let spots: NeutralSpots = ctx.data(|d| d.get_temp(egui::Id::unique(NeutralSpots::ID)))?;
+    let spot = *spots.0.get(&photo?)?;
+    (spot.foliage == wants_foliage(&preset.name)).then_some(spot)
+}
+
+/// `preset.apply`'s parameters, with the re-pick spot when there is one.
+fn apply_params(ctx: &egui::Context, session: &lightcraft_engine::Session, pid: &str, amount: f64) -> serde_json::Value {
+    let mut p = json!({"id": pid, "amount": amount});
+    if let Some(pr) = session.presets.iter().find(|p| p.id == pid)
+        && let Some(s) = neutral_spot(ctx, session.active(), pr)
+    {
+        p["neutralAt"] = json!({"x": s.x, "y": s.y});
+    }
+    p
+}
+
+/// Apply a preset, with the re-pick when there is one.
+fn apply_preset(app: &mut LightcraftApp, ctx: &egui::Context, pid: &str, amount: f64) -> bool {
+    app.run("preset.apply", apply_params(ctx, &app.session, pid, amount)).is_ok()
+}
+
 /// The Presets panel: the Favorites section of starred presets on top (issue #1999), then the
 /// groups of built-in and user presets, each row applying its preset on click.
 pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
@@ -142,7 +206,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 && app.run("edit.undo", json!({})).is_ok()
             {
                 // Only replace the most recent preset; never undo intervening edits.
-                if app.run("preset.apply", json!({"id": &last.id, "amount": v})).is_ok() {
+                if apply_preset(app, &ui.ctx().clone(), &last.id, v) {
                     AppliedByPhoto::remember(ui.ctx(), &app.session, &last.id);
                     ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, last.id, v)));
                 } else {
@@ -227,7 +291,15 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.7));
                     }
                     // the preview is what a click commits: the same composition as `preset.apply` (`Session::preset_applied`)
-                    let look = if thumbs || resp.hovered() { active.and_then(|id| app.session.preset_applied(id, &pr, 1.0)) } else { None };
+                    let mut look = if thumbs || resp.hovered() { active.and_then(|id| app.session.preset_applied(id, &pr, 1.0)) } else { None };
+                    // the IR playground: a recipe's preview shows it re-picked at the photo's Neutral spot,
+                    // as clicking it will
+                    if let (Some(id), Some(l)) = (active, look.as_ref())
+                        && let Some(sp) = neutral_spot(ui.ctx(), active, &pr)
+                        && let Some(picked) = app.session.mixer_repick(id, l, (sp.x, sp.y))
+                    {
+                        look = Some(picked);
+                    }
                     let mut text_x = r.left() + 40.0;
                     if thumbs && let (Some(id), Some(s)) = (active, look.as_ref()) {
                         let tr = Rect::from_min_size(pos2(r.left() + 36.0, r.top() + 5.0), vec2(66.0, row_h - 10.0));
@@ -258,7 +330,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                             ui.data_mut(|d| d.insert_temp(egui::Id::unique("last-preset-hover"), (id, pr.clone(), label)));
                         }
                     }
-                    if resp.clicked() && app.run("preset.apply", json!({"id": pid, "amount": 100})).is_ok() {
+                    if resp.clicked() && apply_preset(app, &ui.ctx().clone(), &pid, 100.0) {
                         AppliedByPhoto::remember(ui.ctx(), &app.session, &pid);
                         ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, pid.clone(), 100.0)));
                         ui.data_mut(|d| d.remove::<(lightcraft_catalog::PhotoId, Preset, String)>(egui::Id::unique("last-preset-hover")));

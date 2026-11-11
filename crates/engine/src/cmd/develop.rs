@@ -309,6 +309,79 @@ fn edit_version(s: &mut Session, p: &Value, c: &str, label: &str, f: impl FnOnce
     ok()
 }
 
+/// The Neutral pick at (x, y) worked out on `d` (any settings for photo `id`, not only the stored
+/// ones): the settings with the new mixer, the section switched on and any Exposure raise, and the
+/// command's result. `develop.mixerNeutralPick` commits it; the IR playground's recipes use it to
+/// re-pick the same spot under a new recipe, in the recipe's own undo step and in its previews.
+pub(crate) fn neutral_pick(s: &mut Session, id: PhotoId, d: &DevelopSettings, x: f64, y: f64) -> Result<(DevelopSettings, Value)> {
+    // a source that cannot be loaded is an operational failure, not a bad parameter: the
+    // picker's UI shows this message itself and saves its "can't be made neutral" advice
+    // for the maths' refusal (a BadParams answer)
+    let src = s.source_now(id, SourceLevel::Thumb).map_err(crate::EngineError::Other)?;
+    let info = s.source_info(id);
+    // The colour at the mixer's input: the sample with the white balance the photo
+    // actually renders applied — read through `effective()`, because with the Color
+    // section's eye off the render resets the stored white balance to the defaults, and
+    // a pick computed on the stored one would neutralize for a look the photo doesn't
+    // have. The mixer is global, so a mask's local temperature/tint is deliberately not
+    // modelled here: the pick neutralizes for the photo as a whole, not per masked
+    // region. The channel mixer itself keeps its own eye (below): `effective()` never
+    // resets it.
+    let sample = sample_point(&src, &d, x, y);
+    let c = lightcraft_pipeline::local::wb_matrix_for(&info, &d.effective()).map_or(sample, |m| {
+        [
+            m[0][0] * sample[0] + m[0][1] * sample[1] + m[0][2] * sample[2],
+            m[1][0] * sample[0] + m[1][1] * sample[1] + m[1][2] * sample[2],
+            m[2][0] * sample[0] + m[2][1] * sample[1] + m[2][2] * sample[2],
+        ]
+    });
+    // The pick means the mixer, even with its section's eye off: instead of computing from
+    // the identity (nine values the render would never show), the same undo step switches
+    // the section on and the pick computes from the stored mixer — the one that will
+    // render once the section is on.
+    let section_off = !d.section_enabled("channelMixer");
+    let current = d.channel_mixer;
+    // the calibration the render will apply after the mixer (the pick keeps the mixer
+    // neutral through it: it is white-preserving), gated by its own section's eye; the
+    // brightness kept is what the spot rendered BEFORE the pick, so with the mixer's own
+    // eye off (the render skipped it) the target is the calibration over the mixer's
+    // input, not over the stored mixer. The calibration's shadow tint comes after the
+    // colour matrix and touches only dark tones; it is not modelled, so a dark spot with
+    // a shadow tint set may keep a little of it.
+    let calib = if d.section_enabled("calibration") {
+        lightcraft_pipeline::colorops::calibration_matrix(&d.calibration).map(|m| m.map(|r| r.map(f64::from)))
+    } else {
+        None
+    };
+    let (mixer, scaled) =
+        lightcraft_pipeline::colorops::mixer_neutral(&current, c.map(f64::from), calib).map_err(|e| bad("develop.mixerNeutralPick", e))?;
+    // A mixer scaled down to fit the ±200 % sliders is a gain lost: the photo comes out darker by
+    // log2(1/scaled) stops, and the result says so (`darker`) for the picker's message. Exposure is
+    // left alone (the PR's rule, from its testers: a raise piled up with every pick).
+    let mut next = d.clone();
+    if section_off {
+        next.set_section_enabled("channelMixer", true);
+    }
+    next.channel_mixer = mixer;
+    let result = json!({
+        "scaled": scaled,
+        "darker": if scaled < 1.0 { -scaled.log2() } else { 0.0 },
+        "mixer": mixer,
+    });
+    Ok((next, result))
+}
+
+impl Session {
+    /// The IR playground's re-pick: `next` (a recipe just applied to photo `id`) with the Neutral
+    /// pick at `spot` run again over the recipe's mixer, uncommitted. The pick lands the spot at its
+    /// own brightness whatever the mix and never touches Exposure, so every recipe re-picked at the
+    /// same spot lands at the same brightness and switching recipes leaves nothing behind. `None`
+    /// when the pick is refused (a mono recipe's mixer has no neutral): the recipe stays as it is.
+    pub fn mixer_repick(&mut self, id: PhotoId, next: &DevelopSettings, spot: (f64, f64)) -> Option<DevelopSettings> {
+        neutral_pick(self, id, next, spot.0, spot.1).ok().map(|(picked, _)| picked)
+    }
+}
+
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
@@ -790,66 +863,13 @@ pub fn specs() -> Vec<CommandSpec> {
             |s, p| {
                 let (x, y) = (f64_req(p, "x", "develop.mixerNeutralPick")?, f64_req(p, "y", "develop.mixerNeutralPick")?);
                 let id = active(s, "develop.mixerNeutralPick")?;
-                // a source that cannot be loaded is an operational failure, not a bad parameter: the
-                // picker's UI shows this message itself and saves its "can't be made neutral" advice
-                // for the maths' refusal (a BadParams answer)
-                let src = s.source_now(id, SourceLevel::Thumb).map_err(crate::EngineError::Other)?;
-                let info = s.source_info(id);
                 let d = s.develop_of(id).unwrap_or_default();
-                // The colour at the mixer's input: the sample with the white balance the photo
-                // actually renders applied — read through `effective()`, because with the Color
-                // section's eye off the render resets the stored white balance to the defaults, and
-                // a pick computed on the stored one would neutralize for a look the photo doesn't
-                // have. The mixer is global, so a mask's local temperature/tint is deliberately not
-                // modelled here: the pick neutralizes for the photo as a whole, not per masked
-                // region. The channel mixer itself keeps its own eye (below): `effective()` never
-                // resets it.
-                let sample = sample_point(&src, &d, x, y);
-                let c = lightcraft_pipeline::local::wb_matrix_for(&info, &d.effective()).map_or(sample, |m| {
-                    [
-                        m[0][0] * sample[0] + m[0][1] * sample[1] + m[0][2] * sample[2],
-                        m[1][0] * sample[0] + m[1][1] * sample[1] + m[1][2] * sample[2],
-                        m[2][0] * sample[0] + m[2][1] * sample[1] + m[2][2] * sample[2],
-                    ]
-                });
-                // The pick means the mixer, even with its section's eye off: instead of computing from
-                // the identity (nine values the render would never show), the same undo step switches
-                // the section on and the pick computes from the stored mixer — the one that will
-                // render once the section is on.
-                let section_off = !d.section_enabled("channelMixer");
-                let current = d.channel_mixer;
-                // the calibration the render will apply after the mixer (the pick keeps the mixer
-                // neutral through it: it is white-preserving), gated by its own section's eye; the
-                // spot comes out at its own brightness with no mix, through the calibration, so the
-                // result doesn't depend on the mix the pick starts from (testers of the PR: aiming
-                // for the mixed brightness blew infrared photos out). The calibration's shadow tint
-                // comes after the colour matrix and touches only dark tones; it is not modelled, so
-                // a dark spot with a shadow tint set may keep a little of it.
-                let calib = if d.section_enabled("calibration") {
-                    lightcraft_pipeline::colorops::calibration_matrix(&d.calibration).map(|m| m.map(|r| r.map(f64::from)))
-                } else {
-                    None
-                };
-                let (mixer, scaled) = lightcraft_pipeline::colorops::mixer_neutral(&current, c.map(f64::from), calib)
-                    .map_err(|e| bad("develop.mixerNeutralPick", e))?;
-                // A mixer scaled down to fit the ±200 % sliders is a gain lost: the photo comes out
-                // darker by log2(1/scaled) stops, and the result says so (`darker`) for the picker's
-                // message. Exposure is left alone. Testers of the PR found that raising Exposure to
-                // make up for it piled up: the next pick can't tell the Exposure an earlier pick
-                // added from the photographer's own, so picking the same spot again, or after
-                // another mix, added the raise again each time.
+                let (next, result) = neutral_pick(s, id, &d, x, y)?;
                 edit(s, "develop.mixerNeutralPick", "Channel Mixer Neutral", |d| {
-                    if section_off {
-                        d.set_section_enabled("channelMixer", true);
-                    }
-                    d.channel_mixer = mixer;
+                    *d = next;
                     Ok(())
                 })?;
-                Ok(json!({
-                    "scaled": scaled,
-                    "darker": if scaled < 1.0 { -scaled.log2() } else { 0.0 },
-                    "mixer": mixer,
-                }))
+                Ok(result)
             }
         ),
         cmd!(
@@ -1416,15 +1436,17 @@ pub fn specs() -> Vec<CommandSpec> {
             }
         ),
         // ---- presets
-        cmd!("preset.apply", "Apply Preset", [], None, "{id: presetId, amount?: 0..200 (percent), ids?}", has_selection, |s, p| {
+        cmd!("preset.apply", "Apply Preset", [], None, "{id: presetId, amount?: 0..200 (percent), ids?, neutralAt?: {x, y} (IR playground: re-run the Neutral pick there on the active photo, same undo step) → {repicked: true} when it ran", has_selection, |s, p| {
             let pid = str_param(p, "id").ok_or_else(|| bad("preset.apply", "missing id"))?;
             let preset = s.presets.iter().find(|x| x.id == pid).cloned().ok_or_else(|| bad("preset.apply", format!("unknown preset `{pid}`")))?;
             let amount = f64_or(p, "amount", 100.0).clamp(0.0, 200.0) / 100.0;
+            let neutral_at = p.get("neutralAt").and_then(|n| Some((n.get("x")?.as_f64()?, n.get("y")?.as_f64()?)));
+            let mut repicked = false;
             // `id` names the preset here: the photos are `ids`, else the selection
             let ids = s.targets(&json!({"ids": p.get("ids")}))?;
-            let ops = ids
-                .iter()
-                .filter_map(|id| s.develop_of(*id).map(|d| (*id, d)))
+            let photos: Vec<_> = ids.iter().filter_map(|id| s.develop_of(*id).map(|d| (*id, d))).collect();
+            let ops = photos
+                .into_iter()
                 .filter_map(|(id, d)| {
                     // a hand-written preset may name one white balance number only, and then it means the same as
                     // a partial: bring the photo onto that scale first, with its own as-shot white, and put the
@@ -1443,11 +1465,22 @@ pub fn specs() -> Vec<CommandSpec> {
                     if on_kelvin_scale {
                         lightcraft_pipeline::local::normalize_wb(&mut next, &info);
                     }
+                    // the IR playground's re-pick: the active photo's Neutral pick, run again at the
+                    // same spot over the recipe's mixer, in the recipe's own undo step (a refused pick
+                    // leaves the recipe as it is)
+                    if Some(id) == s.active()
+                        && let Some(spot) = neutral_at
+                        && let Some(picked) = s.mixer_repick(id, &next, spot)
+                    {
+                        next = picked;
+                        repicked = true;
+                    }
                     s.develop_op(id, next, &format!("Preset: {}", preset.name))
                 })
                 .collect::<Vec<_>>();
             s.commit(&format!("Preset: {}", preset.name), Op::Batch { ops })?;
-            ok()
+            // null as before, unless the IR playground's re-pick ran
+            Ok(if repicked { json!({"repicked": true}) } else { Value::Null })
         }),
         cmd!("preset.create", "Create Preset", ["Photo"], None, "{name, group?, groups?: [settingsGroup]}", has_active, |s, p| {
             let c = "preset.create";
